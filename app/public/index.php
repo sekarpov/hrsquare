@@ -1,4 +1,4 @@
 <!doctype html>
 <html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>HRSquare — скоро открытие</title>
 <style>body{margin:0;background:#f5f7fb;color:#17253d;font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}main{max-width:640px;padding:40px}b{font-size:24px}h1{font-size:clamp(36px,7vw,64px);line-height:1.1;letter-spacing:-2px}p{font-size:20px;line-height:1.6;color:#55647a}.badge{display:inline-block;padding:8px 14px;background:#e4ebff;border-radius:20px;font-size:14px;color:#3458ba}</style>
-<main><b>HRSquare<span style="color:#5279ed">.</span></b><h1>Здесь начинается<br>новая возможность.</h1><p>Мы готовим платформу, которая поможет людям и компаниям находить друг друга.</p><span class="badge">Скоро открытие</span></main></html>
+<main><b>HRSquare111111111<span style="color:#5279ed">.</span></b><h1>Здесь начинается<br>новая возможность.</h1><p>Мы готовим платформу, которая поможет людям и компаниям находить друг друга.</p><span class="badge">Скоро открытие</span></main></html>
