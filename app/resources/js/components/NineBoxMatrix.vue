@@ -113,7 +113,7 @@ const selected = computed(() => props.selectedCell);
                                 v-if="selected === cell"
                                 class="matrix-selected-label"
                             >
-                                <i class="pi pi-check" aria-hidden="true" />
+                                <i class="pi pi-star-fill" aria-hidden="true" />
                                 Текущая оценка
                             </span>
                         </div>
@@ -336,8 +336,25 @@ const selected = computed(() => props.selectedCell);
     border: 3px solid var(--nine-box-foreground);
     padding: 14px;
     box-shadow:
+        inset 0 0 0 999px rgb(20 43 122 / 8%),
         0 0 0 2px var(--nine-box-on-blue),
         0 0 0 4px var(--nine-box-foreground);
+}
+.matrix-cell.selected .matrix-code {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    min-height: 28px;
+    padding: 4px;
+    border-radius: 6px;
+    background: var(--nine-box-on-blue);
+    color: var(--nine-box-foreground);
+    font-size: 13px;
+}
+.matrix-cell.selected .matrix-selected-label {
+    padding: 7px 8px;
+    box-shadow: 0 2px 5px rgb(20 43 122 / 15%);
 }
 .matrix-cell:enabled:hover {
     filter: brightness(1.04);
