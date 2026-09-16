@@ -98,7 +98,7 @@ const selected = computed(() => props.selectedCell);
                         type="button"
                         :disabled="!interactive"
                         :aria-pressed="selected === cell"
-                        :aria-label="`${cell}, ${nineBoxMetadata[cell].title}, RESULT ${resultLevels[i % 3]}, POTENTIAL ${potentialLevels[Math.floor(i / 3)]}. ${nineBoxMetadata[cell].description}${nineBoxMetadata[cell].recommendation ? ' ' + nineBoxMetadata[cell].recommendation : ''}`"
+                        :aria-label="`${selected === cell ? 'Текущая оценка. ' : ''}${cell}, ${nineBoxMetadata[cell].title}, RESULT ${resultLevels[i % 3]}, POTENTIAL ${potentialLevels[Math.floor(i / 3)]}. ${nineBoxMetadata[cell].description}${nineBoxMetadata[cell].recommendation ? ' ' + nineBoxMetadata[cell].recommendation : ''}`"
                         class="matrix-cell"
                         :class="[
                             { selected: selected === cell },
@@ -107,7 +107,16 @@ const selected = computed(() => props.selectedCell);
                         ]"
                         @click="emit('select', cell)"
                     >
-                        <strong class="matrix-code">{{ cell }}</strong>
+                        <div class="matrix-cell-header">
+                            <strong class="matrix-code">{{ cell }}</strong>
+                            <span
+                                v-if="selected === cell"
+                                class="matrix-selected-label"
+                            >
+                                <i class="pi pi-check" aria-hidden="true" />
+                                Текущая оценка
+                            </span>
+                        </div>
                         <span class="matrix-title">{{
                             nineBoxMetadata[cell].title
                         }}</span>
@@ -119,11 +128,6 @@ const selected = computed(() => props.selectedCell);
                             class="matrix-recommendation"
                             >{{ nineBoxMetadata[cell].recommendation }}</span
                         >
-                        <i
-                            v-if="selected === cell"
-                            class="pi pi-check-circle"
-                            aria-hidden="true"
-                        />
                     </button>
                 </div>
             </div>
@@ -241,6 +245,32 @@ const selected = computed(() => props.selectedCell);
     font-weight: 700;
     line-height: 1.3;
 }
+.matrix-cell-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    min-height: 42px;
+    width: 100%;
+}
+.matrix-selected-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 7px;
+    border-radius: 6px;
+    background: var(--nine-box-foreground);
+    color: var(--nine-box-on-blue);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+.matrix-selected-label .pi {
+    position: static;
+    font-size: 10px;
+    color: inherit;
+}
 .matrix-title {
     margin-top: 9px;
     font-size: 14px;
@@ -303,8 +333,11 @@ const selected = computed(() => props.selectedCell);
 }
 .matrix-cell.selected {
     transform: none;
-    border-color: var(--nine-box-foreground);
-    box-shadow: 0 0 0 3px rgb(20 43 122 / 25%);
+    border: 3px solid var(--nine-box-foreground);
+    padding: 14px;
+    box-shadow:
+        0 0 0 2px var(--nine-box-on-blue),
+        0 0 0 4px var(--nine-box-foreground);
 }
 .matrix-cell:enabled:hover {
     filter: brightness(1.04);
