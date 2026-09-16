@@ -553,23 +553,7 @@ p {
     right: 8px;
     top: 8px;
 }
-.cell-M {
-    background: #f9f0eb;
-    color: #b3917c;
-}
-.cell-S {
-    background: #f1f0fa;
-    color: #a29bc1;
-}
-.cell-B {
-    background: #edf6f1;
-    color: #88ab9c;
-}
 .matrix-cell.selected {
-    background: #4765dc;
-    color: #fff;
-    border-color: #4765dc;
-    box-shadow: 0 3px 10px #4765dc28;
     transform: scale(1.03);
 }
 .axis-levels {
