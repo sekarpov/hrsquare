@@ -20,7 +20,7 @@ class CandidateAccessTest extends TestCase
         $this->actingAs($a)->getJson('/api/candidates')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $own->id);
         $this->getJson('/api/candidates/'.$other->id)->assertForbidden();
         $this->getJson('/api/candidates/'.$other->id.'/assessments')->assertForbidden();
-        $assessment = $this->completed($other, $b, 3, 3);
+        $assessment = $this->completed($other, $b, 4, 4);
         $this->getJson('/api/assessments/'.$assessment->id)->assertForbidden();
         $this->postJson('/api/candidates/'.$other->id.'/assessments', [])->assertForbidden();
         $this->actingAs($r)->getJson('/api/candidates')->assertJsonCount(2, 'data');

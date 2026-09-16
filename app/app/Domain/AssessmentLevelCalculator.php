@@ -9,8 +9,8 @@ class AssessmentLevelCalculator
 {
     public function calculate(float $score): AssessmentLevel
     {
-        if (! is_finite($score) || $score < 0 || $score > 3) {
-            throw new InvalidArgumentException('Score must be between 0 and 3');
+        if (! is_finite($score) || $score < config('assessment.score_min') || $score > config('assessment.score_max')) {
+            throw new InvalidArgumentException('Score must be between 1 and 4');
         }
 
         return match (true) {

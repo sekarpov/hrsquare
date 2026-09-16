@@ -37,7 +37,7 @@ class CandidateCrudTest extends TestCase
         $r = $this->person('r', UserRole::RECRUITER);
         $a = $this->person('a');
         $c = $this->candidate($r, $a);
-        $this->completed($c, $a, 2, 2);
+        $this->completed($c, $a, 3, 3);
         $this->actingAs($r)->deleteJson('/api/candidates/'.$c->id)->assertUnprocessable();
         $this->assertDatabaseHas('candidates',['id' => $c->id]);
     }

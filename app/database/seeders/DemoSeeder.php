@@ -35,7 +35,7 @@ class DemoSeeder extends Seeder
                 $data = ['calibration_signal' => 'NEEDS_CALIBRATION', 'main_risk' => 'NONE', 'final_comment' => 'Подтверждены конкретные примеры из интервью.'];
                 foreach (array_keys(config('assessment.criteria')) as $key) {
                     $snake = Str::snake($key);
-                    $data[$snake.'_score'] = config('assessment.criteria.'.$key.'.group') === 'RESULT' ? 1 + (($i + $j) % 3) : 1 + ((intdiv($i, 3) + $j) % 3);
+                    $data[$snake.'_score'] = config('assessment.criteria.'.$key.'.group') === 'RESULT' ? 2 + (($i + $j) % 3) : 2 + ((intdiv($i, 3) + $j) % 3);
                     $data[$snake.'_evidence'] = 'Кандидат привёл пример проекта с измеримым результатом и объяснил личный вклад.';
                 }
                 Carbon::withTestNow($reference->copy()->subDays(10 - $j)->subMinutes($i), function () use ($service, $c, $manager, $data) {

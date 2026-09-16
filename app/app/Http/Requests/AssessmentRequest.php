@@ -21,7 +21,7 @@ class AssessmentRequest extends FormRequest
     {
         $rules = ['status' => ['sometimes', Rule::in([AssessmentStatus::DRAFT->value])], 'calibrationSignal' => ['sometimes', Rule::enum(CalibrationSignal::class)], 'mainRisk' => ['sometimes', Rule::enum(MainRisk::class)], 'finalComment' => ['nullable', 'string', 'max:10000']];
         foreach (array_keys(config('assessment.criteria')) as $key) {
-            $rules[$key.'Score'] = ['nullable', 'integer', 'between:0,3'];
+            $rules[$key.'Score'] = ['nullable', 'integer', 'between:'.config('assessment.score_min').','.config('assessment.score_max')];
             $rules[$key.'Evidence'] = ['nullable', 'string', 'max:10000'];
         }
 

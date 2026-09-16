@@ -12,47 +12,137 @@ const props = withDefaults(
 );
 const emit = defineEmits<{ select: [cell: Cell] }>();
 const cells: Cell[] = ["M1", "S1", "B1", "M2", "S2", "B2", "M3", "S3", "B3"];
-const labels = [
-    "Высокий потенциал",
-    "Высокий потенциал",
-    "Высокий потенциал",
-    "Средний потенциал",
-    "Средний потенциал",
-    "Средний потенциал",
-    "Низкий потенциал",
-    "Низкий потенциал",
-    "Низкий потенциал",
-];
+const nineBoxMetadata: Record<
+    Cell,
+    { title: string; description: string; recommendation: string | null }
+> = {
+    M1: {
+        title: "НЕРЕАЛИЗОВАННЫЙ ПОТЕНЦИАЛ",
+        description:
+            "Низкая доказанная результативность при сильных признаках Potential.",
+        recommendation: "Рассмотреть другую роль / уровень",
+    },
+    S1: {
+        title: "ТАЛАНТ / БУДУЩИЙ ЛИДЕР",
+        description:
+            "Результативность подтверждена на хорошем уровне + высокий Potential.",
+        recommendation: "Инвестируем в рост — результат уже на хорошем уровне",
+    },
+    B1: {
+        title: "ТАЛАНТ / ЗВЕЗДА",
+        description: "Высокая доказанная результативность + высокий Potential.",
+        recommendation: "Приоритетный кандидат",
+    },
+    M2: {
+        title: "НЕДОСТАТОЧНАЯ РЕЗУЛЬТАТИВНОСТЬ",
+        description: "Результат недостаточно подтверждён.",
+        recommendation: null,
+    },
+    S2: {
+        title: "ПЕРСПЕКТИВНЫЙ КАНДИДАТ",
+        description: "Результативность подтверждена + Potential развития есть.",
+        recommendation: "Решение требует оценки риска",
+    },
+    B2: {
+        title: "СИЛЬНЫЙ ПРОФЕССИОНАЛ",
+        description:
+            "Высокая результативность + достаточный Potential для текущей / следующей сложности.",
+        recommendation: "Сильный кандидат на текущую позицию",
+    },
+    M3: {
+        title: "НЕ ПОДТВЕРЖДЁН",
+        description: "Низкая результативность + низкий Potential.",
+        recommendation: null,
+    },
+    S3: {
+        title: "ОГРАНИЧЕННЫЙ ПРОГНОЗ",
+        description: "Средняя результативность + низкий Potential.",
+        recommendation: null,
+    },
+    B3: {
+        title: "СИЛЬНЫЙ ИСПОЛНИТЕЛЬ ТЕКУЩЕГО УРОВНЯ",
+        description:
+            "Высокая результативность + низкий Potential. Редкое исключение (~5%).",
+        recommendation: null,
+    },
+};
+const potentialLevels = ["HIGH", "MEDIUM", "LOW"];
+const resultLevels = ["LOW", "MEDIUM", "HIGH"];
 const selected = computed(() => props.selectedCell);
 </script>
 <template>
     <div class="matrix-wrap">
-        <div class="potential-axis">POTENTIAL ↑</div>
-        <div class="matrix-content">
-            <div class="matrix" role="group" aria-label="Матрица 9-Box">
-                <button
-                    v-for="(cell, i) in cells"
-                    :key="cell"
-                    type="button"
-                    :disabled="!interactive"
-                    :aria-pressed="selected === cell"
-                    :aria-label="`${cell}, ${labels[i]}, результат ${['низкий', 'средний', 'высокий'][i % 3]}`"
-                    class="matrix-cell"
-                    :class="[
-                        { selected: selected === cell },
-                        `cell-${cell}`,
-                        `row-${cell[1]}`,
-                    ]"
-                    @click="emit('select', cell)"
-                >
-                    <strong>{{ cell }}</strong
-                    ><i v-if="selected === cell" class="pi pi-check-circle" />
-                </button>
+        <div
+            class="matrix-scroll"
+            tabindex="0"
+            role="region"
+            aria-label="Матрица 9-Box, горизонтальная прокрутка"
+        >
+            <div class="matrix-frame">
+                <div class="result-axis">RESULT / РЕЗУЛЬТАТИВНОСТЬ →</div>
+                <div class="axis-levels">
+                    <span v-for="level in resultLevels" :key="level">{{
+                        level
+                    }}</span>
+                </div>
+                <div class="potential-axis">POTENTIAL ↑</div>
+                <div class="potential-levels">
+                    <span v-for="level in potentialLevels" :key="level">{{
+                        level
+                    }}</span>
+                </div>
+                <div class="matrix" role="group" aria-label="Матрица 9-Box">
+                    <button
+                        v-for="(cell, i) in cells"
+                        :key="cell"
+                        type="button"
+                        :disabled="!interactive"
+                        :aria-pressed="selected === cell"
+                        :aria-label="`${cell}, ${nineBoxMetadata[cell].title}, RESULT ${resultLevels[i % 3]}, POTENTIAL ${potentialLevels[Math.floor(i / 3)]}. ${nineBoxMetadata[cell].description}${nineBoxMetadata[cell].recommendation ? ' ' + nineBoxMetadata[cell].recommendation : ''}`"
+                        class="matrix-cell"
+                        :class="[
+                            { selected: selected === cell },
+                            `cell-${cell}`,
+                            `row-${cell[1]}`,
+                        ]"
+                        @click="emit('select', cell)"
+                    >
+                        <strong class="matrix-code">{{ cell }}</strong>
+                        <span class="matrix-title">{{
+                            nineBoxMetadata[cell].title
+                        }}</span>
+                        <span class="matrix-description">{{
+                            nineBoxMetadata[cell].description
+                        }}</span>
+                        <span
+                            v-if="nineBoxMetadata[cell].recommendation"
+                            class="matrix-recommendation"
+                            >{{ nineBoxMetadata[cell].recommendation }}</span
+                        >
+                        <i
+                            v-if="selected === cell"
+                            class="pi pi-check-circle"
+                            aria-hidden="true"
+                        />
+                    </button>
+                </div>
             </div>
-            <div class="axis-levels">
-                <span>LOW</span><span>MEDIUM</span><span>HIGH</span>
+        </div>
+        <div class="matrix-notes">
+            <div>
+                <strong>RESULT — доказанная результативность.</strong>
+                <p>
+                    HIGH: сильный результат · MEDIUM: цель достигнута · LOW:
+                    результат не подтверждён.
+                </p>
             </div>
-            <div class="result-axis">RESULT →</div>
+            <div>
+                <strong>POTENTIAL — прогноз.</strong>
+                <p>
+                    Строится на конкретных фактах: Обучаемость, Адаптивность,
+                    Инициативность.
+                </p>
+            </div>
         </div>
     </div>
 </template>
@@ -68,9 +158,132 @@ const selected = computed(() => props.selectedCell);
     --nine-box-foreground: #142b7a;
     --nine-box-on-blue: #ffffff;
 }
+.matrix-wrap {
+    display: block;
+    max-width: 100% !important;
+    min-width: 0;
+    width: 100%;
+    container-type: inline-size;
+}
+.matrix-scroll {
+    overflow-x: auto;
+    padding: 5px;
+}
+.matrix-frame {
+    min-width: 640px;
+    display: grid;
+    grid-template-columns: 24px 56px minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    column-gap: 10px;
+    row-gap: 12px;
+}
+.result-axis {
+    grid-column: 3;
+    margin: 0;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    color: var(--muted);
+}
+.axis-levels {
+    grid-column: 3;
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    gap: 7px;
+    color: var(--muted);
+}
+.potential-axis {
+    grid-column: 1;
+    grid-row: 3;
+    align-self: center;
+    justify-self: center;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+}
+.potential-levels {
+    grid-column: 2;
+    grid-row: 3;
+    display: grid;
+    grid-template-rows: repeat(3, 1fr);
+    gap: 7px;
+    align-items: center;
+    text-align: right;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+}
+.matrix {
+    grid-column: 3;
+    grid-row: 3;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
+}
 .matrix-cell {
+    aspect-ratio: auto;
+    min-width: 0;
+    min-height: 260px;
+    padding: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    text-align: left;
+    gap: 0;
+    overflow-wrap: anywhere;
+    font-weight: 400;
     background: var(--nine-box-neutral);
     color: var(--nine-box-foreground);
+}
+.matrix-cell .matrix-code {
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+.matrix-title {
+    margin-top: 9px;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.25;
+}
+.matrix-description {
+    margin-top: 12px;
+    font-size: 12px;
+    line-height: 1.45;
+}
+.matrix-recommendation {
+    margin-top: auto;
+    padding-top: 15px;
+    font-size: 12px;
+    line-height: 1.4;
+    font-weight: 600;
+    font-style: italic;
+}
+.matrix-notes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.5;
+}
+.matrix-notes > div {
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+.matrix-notes strong {
+    font-weight: 600;
+}
+.matrix-notes p {
+    margin: 6px 0 0;
+}
+@container (max-width: 600px) {
+    .matrix-notes {
+        grid-template-columns: 1fr;
+    }
 }
 .cell-S1 {
     background: var(--nine-box-mint);
@@ -89,6 +302,7 @@ const selected = computed(() => props.selectedCell);
     background: var(--nine-box-light-blue);
 }
 .matrix-cell.selected {
+    transform: none;
     border-color: var(--nine-box-foreground);
     box-shadow: 0 0 0 3px rgb(20 43 122 / 25%);
 }

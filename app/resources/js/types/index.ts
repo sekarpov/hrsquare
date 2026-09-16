@@ -1,8 +1,15 @@
+export type Score = 1 | 2 | 3 | 4;
 export type UserRole = "RECRUITER" | "MANAGER";
 export type Level = "LOW" | "MEDIUM" | "HIGH";
 export type Cell = "M1" | "S1" | "B1" | "M2" | "S2" | "B2" | "M3" | "S3" | "B3";
 export type CalibrationSignal = "NONE" | "ALIGNED" | "NEEDS_CALIBRATION";
-export type MainRisk = "NONE" | "DELIVERY" | "LEARNING" | "ADAPTABILITY" | "OWNERSHIP" | "MOTIVATION";
+export type MainRisk =
+    | "NONE"
+    | "DELIVERY"
+    | "LEARNING"
+    | "ADAPTABILITY"
+    | "OWNERSHIP"
+    | "MOTIVATION";
 export type CandidateStatus = "ACTIVE" | "HIRED" | "REJECTED";
 export interface User {
     id: number;
@@ -27,7 +34,7 @@ export type CriterionKey =
     | "adaptability"
     | "initiative";
 export type AssessmentInput = Partial<
-    Record<`${CriterionKey}Score`, number | null> &
+    Record<`${CriterionKey}Score`, Score | null> &
         Record<`${CriterionKey}Evidence`, string | null>
 > & {
     calibrationSignal?: CalibrationSignal;
@@ -90,10 +97,14 @@ export interface Criterion {
     group: "RESULT" | "POTENTIAL";
     title: string;
     question: string;
-    probe: string;
+    clarification: string[];
+    strongAnswer: string;
+    placeholder: string;
     anchors: string[];
 }
 export interface Methodology {
+    score_min: number;
+    score_max: number;
     medium_threshold: number;
     high_threshold: number;
     criteria: Record<CriterionKey, Criterion>;

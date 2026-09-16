@@ -28,7 +28,7 @@ class CompleteAssessmentRequest extends AssessmentRequest
     {
         $rules = parent::rules();
         foreach (array_keys(config('assessment.criteria')) as $key) {
-            $rules[$key.'Score'] = ['required', 'integer', 'between:0,3'];
+            $rules[$key.'Score'] = ['required', 'integer', 'between:'.config('assessment.score_min').','.config('assessment.score_max')];
         }
 
         return $rules;

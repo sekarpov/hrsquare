@@ -10,7 +10,9 @@ import Select from "primevue/select";
 import Tag from "primevue/tag";
 import Message from "primevue/message";
 import Skeleton from "primevue/skeleton";
+import AssessmentCriterion from "../components/AssessmentCriterion.vue";
 import AssessmentSummary from "../components/AssessmentSummary.vue";
+import NineBoxMatrix from "../components/NineBoxMatrix.vue";
 import { assessmentsApi } from "../api/assessments";
 import { candidatesApi } from "../api/candidates";
 import { fieldErrors, errorMessage } from "../api/http";
@@ -166,6 +168,11 @@ function complete() {
                 :severity="assessment.status === 'DRAFT' ? 'warn' : 'success'"
             />
         </div>
+        <Message severity="info" class="assessment-methodology-note"
+            >Оценка строится на конкретных фактах из предыдущего опыта
+            кандидата. Для каждого критерия зафиксируйте пример
+            поведения/результата и выберите уровень 1–4.</Message
+        >
         <Message v-if="failure" severity="error">{{ failure }}</Message
         ><Message v-if="!canEdit" severity="info">{{
             assessment.status === "COMPLETED"
@@ -190,83 +197,34 @@ function complete() {
                         <p>
                             {{
                                 group === "RESULT"
-                                    ? "Что кандидат уже сделал и какой вклад внёс."
-                                    : "Как кандидат учится, адаптируется и действует самостоятельно."
+                                    ? "Что кандидат уже доказал предыдущим опытом?"
+                                    : "Как кандидат действовал в новых, изменяющихся и не заданных заранее ситуациях?"
                             }}
                         </p>
                     </div>
-                    <article
+                    <Message
+                        v-if="group === 'POTENTIAL'"
+                        severity="secondary"
+                        class="potential-evidence-note"
+                        >Potential оценивается по конкретным фактам поведения
+                        кандидата. Стаж, возраст, количество проектов или общее
+                        впечатление сами по себе не являются подтверждением
+                        Potential.</Message
+                    >
+                    <AssessmentCriterion
                         v-for="([key, criterion], index) in criteria.filter(
                             ([, c]) => c.group === group,
                         )"
                         :key="key"
-                        class="panel criterion-card"
-                    >
-                        <div class="criterion-title">
-                            <span class="criterion-number"
-                                >0{{ index + 1 }}</span
-                            >
-                            <h3>{{ criterion.title }}</h3>
-                        </div>
-                        <div class="interview-prompt">
-                            <small>ВОПРОС КАНДИДАТУ</small>
-                            <p>{{ criterion.question }}</p>
-                            <small>ЧТО УТОЧНИТЬ</small>
-                            <p class="muted">{{ criterion.probe }}</p>
-                        </div>
-                        <label class="field"
-                            >Факты интервью<Textarea
-                                v-model="form[`${key}Evidence`]"
-                                :disabled="!canEdit"
-                                rows="3"
-                                auto-resize
-                                placeholder="Конкретные действия, контекст и подтверждённый результат"
-                                :invalid="!!errors[`${key}Evidence`]"
-                            /><small
-                                v-for="error in errors[`${key}Evidence`]"
-                                class="error"
-                                >{{ error }}</small
-                            ></label
-                        >
-                        <div class="score-label">Оценка</div>
-                        <div
-                            class="score-buttons"
-                            role="group"
-                            :aria-label="`Оценка: ${criterion.title}`"
-                        >
-                            <button
-                                v-for="score in [0, 1, 2, 3]"
-                                :key="score"
-                                type="button"
-                                :disabled="!canEdit"
-                                :aria-pressed="form[`${key}Score`] === score"
-                                :class="{
-                                    active: form[`${key}Score`] === score,
-                                }"
-                                @click="form[`${key}Score`] = score"
-                            >
-                                {{ score }}</button
-                            ><Button
-                                v-if="canEdit && form[`${key}Score`] != null"
-                                icon="pi pi-times"
-                                text
-                                aria-label="Очистить балл"
-                                @click="form[`${key}Score`] = null"
-                            />
-                        </div>
-                        <p class="score-anchor">
-                            {{
-                                form[`${key}Score`] != null
-                                    ? criterion.anchors[form[`${key}Score`]!]
-                                    : "Выберите балл на основе фактов интервью"
-                            }}
-                        </p>
-                        <small
-                            class="error"
-                            v-for="error in errors[`${key}Score`]"
-                            >{{ error }}</small
-                        >
-                    </article>
+                        :criterion="criterion"
+                        :criterion-key="key"
+                        :number="index + 1 + (group === 'POTENTIAL' ? 3 : 0)"
+                        v-model:score="form[`${key}Score`]"
+                        v-model:evidence="form[`${key}Evidence`]"
+                        :editable="canEdit"
+                        :score-errors="errors[`${key}Score`]"
+                        :evidence-errors="errors[`${key}Evidence`]"
+                    />
                     <div class="dimension-summary">
                         {{ group }}
                         <strong>{{
@@ -274,8 +232,8 @@ function complete() {
                                 ? preview?.resultAverage
                                 : preview?.potentialAverage
                             )?.toFixed(2) ?? "—"
-                        }}</strong
-                        ><span>{{
+                        }}</strong>
+                        / 4<span>{{
                             (group === "RESULT"
                                 ? preview?.resultLevel
                                 : preview?.potentialLevel) ??
@@ -331,7 +289,10 @@ function complete() {
                     <h2>Итог оценки</h2>
                     <i v-if="previewing" class="pi pi-spin pi-spinner" />
                 </div>
-                <AssessmentSummary :assessment="preview" />
+                <AssessmentSummary :assessment="preview" compact />
+                <a href="#assessment-matrix" class="back-link"
+                    >Посмотреть матрицу 9-Box ↓</a
+                >
                 <p class="methodology-note">
                     Расчёт выполняется сервером. Пороги уровней временные:
                     {{ methodology.medium_threshold }} /
@@ -366,8 +327,42 @@ function complete() {
                     >← К карточке кандидата</RouterLink
                 >
             </aside>
-        </div></template
+        </div>
+        <section
+            id="assessment-matrix"
+            class="panel assessment-matrix"
+            aria-labelledby="assessment-matrix-title"
+        >
+            <div class="section-header">
+                <h2 id="assessment-matrix-title">Итоговый 9-Box</h2>
+            </div>
+            <NineBoxMatrix
+                :selected-cell="preview?.nineBoxCell"
+                :result-level="preview?.resultLevel"
+                :potential-level="preview?.potentialLevel"
+            /></section></template
     ><Message v-else severity="error">{{
         failure || "Оценка недоступна"
     }}</Message>
 </template>
+
+<style scoped>
+.assessment-matrix {
+    margin-top: 24px;
+    max-width: 1400px;
+    min-width: 0;
+    padding: 24px;
+    scroll-margin-top: 24px;
+}
+@media (max-width: 600px) {
+    .assessment-matrix {
+        padding: 16px;
+    }
+}
+.assessment-methodology-note {
+    margin-bottom: 20px;
+}
+.potential-evidence-note {
+    margin-bottom: 20px;
+}
+</style>

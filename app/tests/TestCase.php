@@ -36,7 +36,7 @@ abstract class TestCase extends \Illuminate\Foundation\Testing\TestCase
         return $c;
     }
 
-    protected function scores(int $result = 2, int $potential = 2): array
+    protected function scores(int $result = 3, int $potential = 3): array
     {
         return ['taskScaleScore' => $result, 'resultImpactScore' => $result, 'personalContributionScore' => $result, 'learningAgilityScore' => $potential, 'adaptabilityScore' => $potential, 'initiativeScore' => $potential];
     }

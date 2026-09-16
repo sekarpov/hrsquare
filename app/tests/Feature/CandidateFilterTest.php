@@ -17,12 +17,12 @@ class CandidateFilterTest extends TestCase
         $a = $this->person('a');
         $c = $this->candidate($r, $a, ['status' => 'HIRED', 'city' => 'Алматы', 'company' => 'Square', 'division' => 'Tech', 'project' => 'Demo']);
         $this->travelTo(now()->subDays(2));
-        $this->completed($c, $a, 3, 3);
+        $this->completed($c, $a, 4, 4);
         $this->travel(1)->days();
-        $latest = $this->completed($c, $a, 3, 2);
-        $this->actingAs($a)->postJson('/api/candidates/'.$c->id.'/assessments', $this->scores(0, 0));
+        $latest = $this->completed($c, $a, 4, 3);
+        $this->actingAs($a)->postJson('/api/candidates/'.$c->id.'/assessments', $this->scores(1, 1));
         $other = $this->candidate($r, $a, ['full_name' => 'Other', 'status' => 'HIRED']);
-        $this->completed($other, $a, 2, 2);
+        $this->completed($other, $a, 3, 3);
         $params = ['status' => 'HIRED', 'resultLevel' => 'HIGH', 'potentialLevel' => 'MEDIUM', 'nineBoxCell' => 'B2', 'city' => 'Алматы', 'company' => 'Square', 'division' => 'Tech', 'project' => 'Demo', 'managerId' => $a->id, 'recruiterId' => $r->id];
         $this->actingAs($r)->getJson('/api/candidates?'.http_build_query($params))->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.currentAssessment.id', $latest->id);
         $this->getJson('/api/candidates?nineBoxCell=B1')->assertJsonCount(0, 'data');
@@ -47,12 +47,12 @@ class CandidateFilterTest extends TestCase
         $a = $this->person('a');
         for ($i = 0; $i < 12; $i++) {
             $c = $this->candidate($r, $a);
-            $this->completed($c, $a, 2, 2);
+            $this->completed($c, $a, 3, 3);
         }
         DB::enableQueryLog();
         DB::flushQueryLog();
         $this->actingAs($r)->getJson('/api/candidates')->assertOk()->assertJsonCount(12, 'data');
-        $this->assertLessThanOrEqual(8,count(DB::getQueryLog()));
+        $this->assertLessThanOrEqual(8, count(DB::getQueryLog()));
         DB::disableQueryLog();
     }
 }
