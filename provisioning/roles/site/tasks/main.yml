@@ -19,7 +19,52 @@
     dest: "{{ site_root }}/"
     mode: preserve
     directory_mode: '0755'
-  loop: [docker-compose.yml, docker, app, scripts, .env.example]
+  loop: [docker-compose.yml, docker, scripts, .env.example]
+- name: Create Laravel application directory
+  ansible.builtin.file:
+    path: "{{ site_root }}/app"
+    state: directory
+    mode: '0755'
+- name: Copy application source without local dependencies or runtime files
+  block:
+    - name: Allocate controller source archive
+      ansible.builtin.tempfile:
+        state: file
+        suffix: .tar.gz
+      delegate_to: localhost
+      become: false
+      register: app_archive
+    - name: Package Laravel source
+      ansible.builtin.command:
+        argv:
+          - tar
+          - --exclude=vendor
+          - --exclude=node_modules
+          - --exclude=.env
+          - --exclude=auth.json
+          - --exclude=bootstrap/cache/*.php
+          - --exclude=storage/logs/*
+          - --exclude=storage/framework/views/*
+          - --exclude=storage/framework/cache/data/*
+          - -czf
+          - "{{ app_archive.path }}"
+          - -C
+          - "{{ playbook_dir }}/../app"
+          - .
+      delegate_to: localhost
+      become: false
+    - name: Extract Laravel source
+      ansible.builtin.unarchive:
+        src: "{{ app_archive.path }}"
+        dest: "{{ site_root }}/app"
+  always:
+    - name: Remove controller source archive
+      ansible.builtin.file:
+        path: "{{ app_archive.path }}"
+        state: absent
+      delegate_to: localhost
+      become: false
+      when: app_archive.path is defined
 - name: Create uploads mountpoint inside read-only application bind mount
   ansible.builtin.file:
     path: "{{ site_root }}/app/public/storage"
@@ -29,11 +74,10 @@
   ansible.builtin.stat:
     path: "{{ site_root }}/.env"
   register: site_env
-- name: Generate environment once
+- name: Prepare persistent environment secrets
   ansible.builtin.command:
     cmd: python3 scripts/init.py
     chdir: "{{ site_root }}"
-  when: not site_env.stat.exists
 - name: Configure public endpoint
   ansible.builtin.lineinfile:
     path: "{{ site_root }}/.env"
@@ -45,6 +89,9 @@
     - {key: HTTP_BIND, value: '0.0.0.0'}
     - {key: HTTP_PORT, value: '80'}
     - {key: HTTPS_PORT, value: '443'}
+    - {key: APP_ENV, value: 'production'}
+    - {key: APP_URL, value: "{{ site_address }}"}
+    - {key: SESSION_SECURE_COOKIE, value: "{{ 'true' if site_address.startswith('https://') else 'false' }}"}
 - name: Grant deployment account ownership of project files
   ansible.builtin.file:
     path: "{{ site_root }}"
@@ -57,6 +104,23 @@
     cmd: docker compose config --quiet
     chdir: "{{ site_root }}"
   changed_when: false
+- name: Build existing PHP service
+  ansible.builtin.command:
+    cmd: docker compose build app
+    chdir: "{{ site_root }}"
+- name: Prepare Laravel dependencies and frontend assets
+  ansible.builtin.command:
+    cmd: ./scripts/app-prepare.sh production
+    chdir: "{{ site_root }}"
+  become_user: "{{ deploy_user }}"
+- name: Start dependencies and PHP
+  ansible.builtin.command:
+    cmd: docker compose up -d --wait --wait-timeout 180 postgres redis app
+    chdir: "{{ site_root }}"
+- name: Apply Laravel migrations
+  ansible.builtin.command:
+    cmd: docker compose exec -T app php artisan migrate --force
+    chdir: "{{ site_root }}"
 - name: Start application and wait for health checks
   ansible.builtin.command:
     cmd: docker compose up -d --build --wait --wait-timeout 180

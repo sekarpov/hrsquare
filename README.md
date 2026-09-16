@@ -1,6 +1,6 @@
 # HRSquare
 
-Начальная инфраструктура сайта: PHP 8.4-FPM + Composer, PostgreSQL 17, Redis 7.4, Caddy с автоматическим HTTPS и страница-заглушка. Ansible устанавливает Docker Engine, Buildx и Compose из официального APT-репозитория на Ubuntu/Debian (amd64/arm64), копирует проект в `/opt/hrsquare` и запускает контейнеры.
+Начальная инфраструктура сайта: PHP 8.4-FPM + Composer, PostgreSQL 17, Redis 7.4, Caddy с автоматическим HTTPS и приложение HRSquare. Ansible устанавливает Docker Engine, Buildx и Compose из официального APT-репозитория на Ubuntu/Debian (amd64/arm64), копирует проект в `/opt/hrsquare` и запускает контейнеры.
 
 ## Локальный запуск
 
@@ -47,9 +47,9 @@ make tools
 
 Adminer: `http://localhost:8089`, система PostgreSQL, сервер `postgres`; логин и пароль из `.env`. Mailpit: `http://localhost:8025`, SMTP внутри Docker `mailpit:1025`. Эти инструменты доступны только на loopback хоста и включаются отдельно. На сервере используйте SSH-туннель, например `ssh -L 8089:127.0.0.1:8089 root@216.57.108.236`.
 
-Для сборки фронтенда доступен `docker compose run --rm node npm ci` (после добавления package.json/lock). Composer: `docker compose exec app composer --version`. Заглушка находится в `app/public/index.php`; здесь будет точка входа Laravel или другого PHP-приложения. Настройки БД/Redis уже передаются контейнеру; приложение должно читать эти переменные. Добавьте `APP_KEY`, рабочий SMTP, миграции и writable-каталоги Laravel при подключении приложения.
+Для сборки фронтенда доступен `docker compose run --rm node npm ci`. Composer: `docker compose exec app composer --version`. Laravel находится в `app/`, его точка входа — `app/public/index.php`. Настройки БД/Redis и APP_KEY передаются через Compose; установка, сборка и миграции выполняются командами ниже.
 
-Том `uploads` предназначен для файлов и доступен через `/storage`. Сейчас используется локальное файловое хранилище; S3, поисковый движок, парсеры, FTP, воркеры очередей и scheduler добавляются при появлении соответствующего кода. Они не нужны заглушке. В отличие от примера MySQL заменён на PostgreSQL, Adminer заменяет phpMyAdmin. Redis можно использовать для кэша, сессий и очередей; для критичных очередей нужна отдельная политика хранения и мониторинг.
+Том `uploads` предназначен для файлов и доступен через `/storage`. Сейчас используется локальное файловое хранилище; S3, поисковый движок, парсеры, FTP, воркеры очередей и scheduler добавляются при появлении соответствующего кода. Они не нужны текущему MVP. В отличие от примера MySQL заменён на PostgreSQL, Adminer заменяет phpMyAdmin. Redis можно использовать для кэша, сессий и очередей; для критичных очередей нужна отдельная политика хранения и мониторинг.
 
 ## Резервные копии
 
@@ -79,3 +79,87 @@ docker compose exec -T postgres sh -ec 'pg_restore --exit-on-error --no-owner --
 `make check` проверяет Compose и синтаксис Ansible. `make up` ждёт healthcheck PostgreSQL, Redis, PHP-FPM и Caddy. PHP healthcheck проверяет соединение с PostgreSQL и авторизацию Redis. Проверяйте HTTP отдельно через `curl`: healthcheck Caddy проверяет сам proxy, а не публичный DNS/TLS.
 
 Установка Docker следует [официальной документации](https://docs.docker.com/engine/install/ubuntu/); HTTPS и хранение сертификатов — [официальному образу Caddy](https://hub.docker.com/_/caddy).
+
+## HRSquare Application
+
+HRSquare — рабочее пространство для ведения кандидатов и оценки результатов и потенциала по 9-Box. Приложение установлено непосредственно в `app/`: Laravel 12, PHP 8.4, Vue 3 SPA, TypeScript, Vite, Vue Router, Pinia, Axios и PrimeVue. Frontend находится в `app/resources/js`, готовые assets — `app/public/build`. Node используется для сборки и не работает постоянно. Backend читает DB/Redis environment из существующего Compose; главным конфигурационным файлом остаётся корневой `.env`, отдельный `app/.env` не требуется.
+
+### Установка и запуск
+
+```sh
+make init      # создаёт или дополняет корневой .env, сохраняет пароли и APP_KEY
+make up        # PHP build, Composer install, npm ci/build, запуск, миграции
+make seed      # только для APP_ENV=local/demo/testing
+```
+
+Откройте `http://localhost:8080`. Для нового checkout нужны Docker/Compose, Python 3, Make и сетевой доступ для Composer/npm/образов. `make up` автоматически устанавливает зависимости и собирает SPA: отдельно запускать backend или Vite dev server не нужно. Повторный запуск не удаляет БД и не меняет существующие секреты. `make app-init` — alias `make up`.
+
+Дополнительные команды:
+
+```sh
+make frontend  # npm ci + TypeScript check + production Vite build в Node profile
+make migrate   # php artisan migrate --force
+make seed      # idempotent demo seed (12 кандидатов, история из 1–3 оценок и черновики)
+make test      # PHPUnit на PostgreSQL в отдельной database hrsquare_test
+make check     # инфраструктура + Python/shell syntax
+```
+
+`make test` создаёт только отдельную тестовую БД **в существующем PostgreSQL**, без нового контейнера/сервера/тома. Тесты используют RefreshDatabase; защита запрещает запуск на рабочей БД. PHPUnit использует array cache/session, чтобы не затрагивать рабочие Redis-сессии. PHP-зависимости тестирования ставятся локальным `make up`; production Composer install использует `--no-dev`.
+
+### Demo accounts
+
+| Роль | Логин | Пароль |
+|---|---|---|
+| Рекрутер | recruiter | recruiter |
+| Менеджер 1 | manager1 | manager1 |
+| Менеджер 2 | manager2 | manager2 |
+
+DemoSeeder запрещён при `APP_ENV=production`, даже с `--force`. Для production первоначальный рекрутер создаётся вручную с безопасным паролем:
+
+```sh
+docker compose exec app php artisan hrsquare:create-recruiter admin 'Имя администратора'
+```
+
+Пароль вводится скрыто; затем пользователей можно добавлять в интерфейсе. Для demo на отдельном стенде установите `APP_ENV=demo` в корневом `.env`, пересоздайте app через `make up`, затем `make seed`. Не используйте публичные demo-пароли для рабочих персональных данных.
+
+### Роли и доступ
+
+RECRUITER видит всех кандидатов и управляет кандидатами и пользователями. MANAGER также может создавать кандидатов; создавший менеджер автоматически добавляется в hiring managers на backend и сохраняет доступ к карточке. MANAGER видит и оценивает только кандидатов, где он назначен hiring manager. Редактирование и удаление кандидатов доступны рекрутеру. Ограничение применяется SQL scope и Laravel Policies, включая прямые запросы карточек и оценок (чужой кандидат возвращает 403). Любой пользователь с доступом к кандидату может создать новую оценку; редактировать и завершать черновик может только его автор. Пользователей выбирают searchable multi-select с серверным поиском и проверкой роли/активности.
+
+Кандидат без оценок удаляется. Кандидат с историей не удаляется: используйте REJECTED. Пользователь со связями не удаляется: отключите isActive; смена роли связанного пользователя запрещена. Последний активный рекрутер защищён от удаления/отключения. Неактивный пользователь не может войти, а его существующая сессия отзывается при следующем запросе.
+
+Auth использует Laravel session/cookie на том же origin, Redis sessions/cache, CSRF, HttpOnly, SameSite=Lax и Secure cookie на HTTPS. JWT и access token в localStorage отсутствуют. Axios получает CSRF cookie через `/api/csrf`, ошибки валидации приходят в camelCase `errors`, а 401/403/404/419 обрабатываются централизованно. Login rate-limited. Caddy — единственный reverse proxy; Laravel доверяет его forwarding headers через адрес непосредственного соединения, PHP-FPM не опубликован на хост.
+
+### Оценки и расчёт
+
+Каждая CandidateAssessment — отдельное интервью. DRAFT допускает пустые баллы; COMPLETED требует все шесть целых баллов 0–3. Для завершённых оценок нет обычного редактирования: исправление делается новой оценкой. Текущая оценка — последняя COMPLETED по `completed_at DESC, id DESC`; черновики не влияют на неё. Eloquent one-of-many выбирает её в SQL, eager loading и фильтры работают без загрузки всей истории или N+1.
+
+RESULT = **сумма** taskScale, resultImpact, personalContribution / 3. POTENTIAL = **сумма** learningAgility, adaptability, initiative / 3. Уровень определяется по неокруглённому среднему, в DTO среднее округляется до двух знаков. Финальный и предварительный расчёты выполняет backend через AssessmentCalculator, AssessmentLevelCalculator и NineBoxCalculator; Vue не дублирует пороги или mapping.
+
+**Временные бизнес-правила, требуют подтверждения HR:** LOW `[0,1.5)`, MEDIUM `[1.5,2.5)`, HIGH `[2.5,3]`. Пороги централизованы в `app/config/assessment.php`. Изменение порогов применяется к новым/редактируемым черновикам; сохранённые COMPLETED сохраняют исходный результат. Вопросы интервью, шкалы, варианты calibration signal и main risk — рабочие MVP-варианты, также требуют согласования с HR; исходные формулировки методологии не были предоставлены.
+
+| POTENTIAL / RESULT | LOW | MEDIUM | HIGH |
+|---|---|---|---|
+| HIGH | M1 | S1 | B1 |
+| MEDIUM | M2 | S2 | B2 |
+| LOW | M3 | S3 | B3 |
+
+Пример серверных фильтров:
+
+```text
+GET /api/candidates?status=HIRED&resultLevel=HIGH&potentialLevel=MEDIUM&nineBoxCell=B2
+```
+
+Также доступны search, position, city, company, division, project, managerId, recruiterId, page, perPage (1–100), sort, direction. Search ищет подстроку без учёта регистра, остальные текстовые фильтры — точное значение. Сортировка разрешена по fullName, position, city, company, division, project, status, createdAt, updatedAt. История пагинируется отдельно.
+
+### Storage и deployment
+
+`./app:/app:ro` сохранён. Только `app/storage` и `app/bootstrap/cache` подключены на запись для Laravel; PHP entrypoint создаёт runtime-каталоги и настраивает владельца www-data. Существующий том uploads по-прежнему подключён в `/app/public/storage`; storage:link не запускается. Для будущих файлов public disk направлен непосредственно на эту точку монтирования. Загрузки файлов в MVP нет.
+
+`make deploy` и `make rollback` сохранены, подготовка дополнена Composer install, Node production build и `artisan migrate --force`. APP_KEY хранится в серверном корневом `.env` и не вращается. Demo seed при деплое не запускается. Откат возвращает код/assets, но не отменяет миграции БД — изменения схемы должны оставаться совместимыми. [Полная инструкция](docs/DEPLOYMENT.md).
+
+### Проверки и документация библиотек
+
+Unit/feature tests покрывают пороги, все 9 клеток, authentication/CSRF/rate limit, роли и прямой доступ, CRUD, неизменяемость completed, history/current, исключение drafts, фильтры current 9-Box, pagination и отсутствие N+1. UI рассчитан на desktop/tablet с горизонтальным scroll таблицы и перестроением форм.
+
+Использованы [документация Laravel 12](https://laravel.com/docs/12.x) и [официальная настройка PrimeVue с Vite](https://primevue.org/vite/).

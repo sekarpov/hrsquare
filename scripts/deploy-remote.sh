@@ -15,6 +15,9 @@ if [ "$action" = deploy ]; then
     # A copy stays on the server, in a private temporary directory.
     cp .env "$stage/.env"
     (cd "$stage" && docker compose config --quiet && docker compose build app)
+    if [ -f "$stage/app/artisan" ]; then
+        (cd "$stage" && ./scripts/app-prepare.sh production)
+    fi
     # Snapshot only deployment files, never .env, data volumes or backups.
     tar -czf "$stage/previous.tar.gz" docker-compose.yml docker app scripts
     mv "$stage/previous.tar.gz" .deploy-previous.tar.gz
@@ -24,16 +27,31 @@ else
     mkdir -p "$stage/app/public/storage"
     cp .env "$stage/.env"
     (cd "$stage" && docker compose config --quiet && docker compose build app)
+    if [ -f "$stage/app/artisan" ]; then
+        (cd "$stage" && ./scripts/app-prepare.sh production)
+    fi
 fi
 # Stop PHP and web while replacing bind-mounted source files.
 # PostgreSQL and Redis keep running. A failed activation can be recovered with make rollback.
+# Keep one stable application key, including on servers created before Laravel.
+if [ -f "$stage/app/artisan" ]; then
+    python3 "$stage/scripts/init.py"
+fi
 docker compose stop web app
+# Runtime directories belong to www-data. Return ownership after stopping PHP
+# so the SSH deployment account can replace the previous source tree.
+docker compose run --rm --no-deps app sh -ec 'for directory in /app/storage /app/bootstrap/cache; do if [ -d "$directory" ]; then chown -R "$1:$2" "$directory"; fi; done' sh "$(id -u)" "$(id -g)"
 for directory in app docker scripts; do
     rm -rf "$site_root/$directory"
     cp -R --preserve=mode "$stage/$directory" "$site_root/$directory"
 done
 cp --preserve=mode "$stage/docker-compose.yml" docker-compose.yml
 mkdir -p app/public/storage
+docker compose up -d --wait --wait-timeout 180 postgres redis app
+if [ -f app/artisan ]; then
+    docker compose exec -T --user www-data app php artisan --version
+    docker compose exec -T app php artisan migrate --force
+fi
 docker compose up -d --wait --wait-timeout 180
 docker compose exec -T --user root app chown www-data:www-data /app/public/storage
 docker compose exec -T --user www-data app sh -ec 'test -d /app/public/storage && test -w /app/public/storage'

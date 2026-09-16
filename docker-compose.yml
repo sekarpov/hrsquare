@@ -33,7 +33,16 @@ services:
     <<: *service
     build: ./docker/php
     environment:
-      APP_ENV: production
+      APP_NAME: HRSquare
+      APP_ENV: ${APP_ENV:-local}
+      APP_KEY: ${APP_KEY:-}
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      APP_DEBUG: 'false'
+      SESSION_DRIVER: redis
+      SESSION_SECURE_COOKIE: ${SESSION_SECURE_COOKIE:-false}
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: sync
+      LOG_CHANNEL: stderr
       DB_CONNECTION: pgsql
       DB_HOST: postgres
       DB_PORT: 5432
@@ -45,6 +54,8 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Run make init first}
     volumes:
       - ./app:/app:ro
+      - ./app/storage:/app/storage
+      - ./app/bootstrap/cache:/app/bootstrap/cache
       - uploads:/app/public/storage
     depends_on:
       postgres:
@@ -100,6 +111,8 @@ services:
     image: node:24-alpine
     profiles: [build]
     working_dir: /app
+    environment:
+      NPM_CONFIG_CACHE: /tmp/npm
     volumes: ["./app:/app"]
     command: [node, --version]
 volumes:

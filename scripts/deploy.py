@@ -39,7 +39,7 @@ try:
         subprocess.run(ssh + [command], check=True)
     else:
         with tempfile.TemporaryFile() as payload:
-            subprocess.run(['tar', '--exclude=.env', '--exclude=__pycache__', '--exclude=*.pyc', '-czf', '-', 'docker-compose.yml', 'docker', 'app', 'scripts'], cwd=root, stdout=payload, check=True)
+            subprocess.run(['tar', '--exclude=.env', '--exclude=__pycache__', '--exclude=*.pyc', '--exclude=vendor', '--exclude=node_modules', '--exclude=auth.json', '--exclude=storage/logs/*', '--exclude=storage/framework/views/*', '--exclude=storage/framework/cache/data/*', '--exclude=bootstrap/cache/*.php', '-czf', '-', 'docker-compose.yml', 'docker', 'app', 'scripts'], cwd=root, stdout=payload, check=True)
             payload.seek(0)
             subprocess.run(ssh + [command], stdin=payload, check=True)
 except subprocess.CalledProcessError as error:

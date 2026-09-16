@@ -8,7 +8,7 @@ make deploy
 make deploy HOST=216.57.108.236 PORT=22 DEPLOY_USER=deploy DEPLOY_PATH=/opt/hrsquare
 ```
 
-Команда передаёт по SSH текущие файлы `app/`, `docker/`, `scripts/` и `docker-compose.yml`. Это содержимое рабочей директории, включая незакоммиченные изменения; в Jenkins используется checkout выбранного коммита. `.env`, Python cache, inventory, ключи и локальные backups не отправляются. Сборка PHP-образа выполняется Docker на сервере; локальный Docker, Ansible и registry для обычного деплоя не требуются.
+Команда передаёт по SSH текущие файлы `app/`, `docker/`, `scripts/` и `docker-compose.yml`. Это содержимое рабочей директории, включая незакоммиченные изменения; в Jenkins используется checkout выбранного коммита. `.env`, Python cache, inventory, ключи и локальные backups не отправляются. Сборка PHP-образа выполняется Docker на сервере; локальный Docker, Ansible и registry для обычного деплоя не требуются. На сервере теперь также используется Python 3 и существующий Node build profile.
 
 ## Подготовка один раз
 
@@ -53,12 +53,12 @@ ssh -p 22 deploy@216.57.108.236 'docker compose version'
 ## Что делает деплой
 
 - Блокирует параллельный деплой и rollback через `.deploy.lock` на сервере.
-- Распаковывает пакет в приватный временный каталог, подставляет серверный `.env`, проверяет Compose и собирает PHP-образ. Если сборка не удалась, работающее приложение продолжает работать.
+- Распаковывает пакет в приватный временный каталог, подставляет серверный `.env`, проверяет Compose и собирает PHP-образ, устанавливает Composer dependencies (`--no-dev`) и собирает Vite assets через существующий Node profile. Если сборка не удалась, работающее приложение продолжает работать.
 - Сохраняет предыдущие исходники и конфигурацию в `.deploy-previous.tar.gz`.
 - Останавливает web/PHP, заменяет файлы и запускает Compose с ожиданием healthcheck. Во время переключения сайт кратковременно недоступен. При изменении конфигурации БД/Redis Compose также может пересоздать соответствующие контейнеры, сохранив тома.
 - Проверяет права записи PHP в uploads и HTTP-запрос к `SITE_ADDRESS` из контейнера Caddy; для вашего HTTPS-домена запрос также проверяет сертификат и маршрут из Docker. Ошибка DNS, сетевого hairpin-доступа или TLS приводит к ошибке проверки.
 
-`.env`, PostgreSQL, Redis, uploads, сертификаты и backups сохраняются. `COMPOSE_PROJECT_NAME` на сервере должен оставаться `hrsquare`, чтобы использовались те же тома. Исходники и scripts полностью заменяются; не редактируйте их только на сервере. Перед изменением схемы БД выполните backup и подготовьте миграции отдельно: скрипт сейчас обслуживает заглушку и не запускает Composer install, npm build или Laravel artisan автоматически.
+`.env`, PostgreSQL, Redis, uploads, сертификаты и backups сохраняются. `COMPOSE_PROJECT_NAME` на сервере должен оставаться `hrsquare`, чтобы использовались те же тома. Исходники и scripts полностью заменяются; не редактируйте их только на сервере. Деплой устанавливает Composer dependencies, выполняет `npm ci && npm run build`, затем запускает `php artisan migrate --force` до запуска web. Перед изменением схемы БД выполните backup; rollback кода не отменяет миграции. DemoSeeder не запускается. APP_KEY дополняется в серверном `.env` один раз и сохраняется.
 
 ## Откат и диагностика
 
@@ -100,3 +100,15 @@ make deploy SSH_KEY=~/.ssh/hrsquare_deploy
 ```
 
 Для ключа с passphrase сначала используйте `ssh-add`: деплой не запрашивает пароль интерактивно. Не передавайте `.pub` в SSH_KEY — нужен путь к приватному ключу. Для диагностики: `ssh -v -o IdentitiesOnly=yes -i ~/.ssh/id_rsa deploy@216.57.108.236 true`.
+
+## Первый production-запуск приложения
+
+После успешного `make deploy SSH_KEY=~/.ssh/id_rsa` создайте первого рекрутера через интерактивную Artisan-команду:
+
+```sh
+ssh -t deploy@216.57.108.236 "cd /opt/hrsquare && docker compose exec app php artisan hrsquare:create-recruiter admin 'Имя администратора'"
+```
+
+Введите безопасный пароль, затем войдите на https://bi.sekarpov.online. APP_ENV должен быть production, APP_URL — https://bi.sekarpov.online, SESSION_SECURE_COOKIE — true. Для существующего сервера с HTTPS initializer заполнит отсутствующие значения автоматически, а provisioning задаёт их явно.
+
+При подготовке приложения vendor и bootstrap получают права чтения/прохода для PHP-FPM; серверный .env остаётся 0600. Перед миграциями deploy проверяет запуск Artisan от www-data, чтобы выявить ошибки прав, скрытые при запуске CLI от root.
