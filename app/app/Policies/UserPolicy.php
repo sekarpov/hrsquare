@@ -2,14 +2,13 @@
 
 namespace App\Policies;
 
-use App\Enums\UserRole;
 use App\Models\User;
 
 class UserPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->role === UserRole::RECRUITER;
+        return $user->managesCandidates();
     }
 
     public function create(User $user): bool
@@ -19,11 +18,11 @@ class UserPolicy
 
     public function update(User $user, User $target): bool
     {
-        return $this->viewAny($user);
+        return $this->viewAny($user) && ($user->isAdmin() || ! $target->isAdmin());
     }
 
     public function delete(User $user, User $target): bool
     {
-        return $this->viewAny($user);
+        return $this->viewAny($user) && ($user->isAdmin() || ! $target->isAdmin());
     }
 }

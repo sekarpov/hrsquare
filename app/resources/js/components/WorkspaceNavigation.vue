@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRoute } from "vue-router";
 import Button from "primevue/button";
+import { roleLabels } from "../config/presentation";
 import { useAuth } from "../stores/auth";
 const auth = useAuth(),
     route = useRoute();
@@ -15,6 +16,7 @@ defineEmits<{ navigate: []; logout: [] }>();
     </div>
     <nav aria-label="Основная навигация">
         <RouterLink
+            v-if="!auth.user?.mustChangePassword"
             to="/candidates"
             :class="{
                 active:
@@ -25,7 +27,7 @@ defineEmits<{ navigate: []; logout: [] }>();
             ><i class="pi pi-users" aria-hidden="true" />Кандидаты</RouterLink
         >
         <RouterLink
-            v-if="auth.isRecruiter"
+            v-if="auth.canManageUsers && !auth.user?.mustChangePassword"
             to="/users"
             :class="{ active: route.path === '/users' }"
             @click="$emit('navigate')"
@@ -34,6 +36,13 @@ defineEmits<{ navigate: []; logout: [] }>();
                 aria-hidden="true"
             />Пользователи</RouterLink
         >
+        <RouterLink
+            to="/account/password"
+            :class="{ active: route.path === '/account/password' }"
+            @click="$emit('navigate')"
+            ><i class="pi pi-lock" aria-hidden="true" />Пароль и
+            безопасность</RouterLink
+        >
     </nav>
     <div class="sidebar-bottom">
         <div class="user-avatar" aria-hidden="true">
@@ -41,7 +50,7 @@ defineEmits<{ navigate: []; logout: [] }>();
         </div>
         <div class="sidebar-user">
             <strong>{{ auth.user?.fullName }}</strong
-            ><small>{{ auth.isRecruiter ? "Рекрутер" : "Менеджер" }}</small>
+            ><small>{{ auth.user ? roleLabels[auth.user.role] : "" }}</small>
         </div>
         <Button
             icon="pi pi-sign-out"

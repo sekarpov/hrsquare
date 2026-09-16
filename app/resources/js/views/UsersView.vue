@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch, onUnmounted } from "vue";
+import { ref, reactive, onMounted, watch, onUnmounted, computed } from "vue";
 import Button from "primevue/button";
 import InputText from "primevue/inputtext";
 import Password from "primevue/password";
@@ -19,7 +19,12 @@ import { usersApi } from "../api/users";
 import { fieldErrors, errorMessage } from "../api/http";
 import { useToast } from "primevue/usetoast";
 import { useConfirm } from "primevue/useconfirm";
+import { useAuth } from "../stores/auth";
+import { useRouter } from "vue-router";
+import { roleLabels } from "../config/presentation";
 import type { User, UserInput, FieldErrors } from "../types";
+const auth = useAuth(),
+    router = useRouter();
 const users = ref<User[]>([]),
     total = ref(0),
     page = ref(1),
@@ -42,9 +47,14 @@ const form = reactive<UserInput>({
     isActive: true,
 });
 const roles = [
+    { label: "Администратор", value: "ADMIN" },
     { label: "Рекрутер", value: "RECRUITER" },
     { label: "Менеджер", value: "MANAGER" },
 ];
+const assignableRoles = computed(() =>
+    roles.filter((role) => auth.isAdmin || role.value !== "ADMIN"),
+);
+const canEditUser = (user: User) => auth.isAdmin || user.role !== "ADMIN";
 let timer: ReturnType<typeof setTimeout>;
 let loadVersion = 0;
 async function load() {
@@ -102,7 +112,19 @@ async function save() {
     errors.value = {};
     formFailure.value = "";
     try {
-        await usersApi.save(form, editing.value?.id);
+        const updated = await usersApi.save(form, editing.value?.id);
+        if (updated.id === auth.user?.id) {
+            auth.user = updated;
+            if (!auth.canManageUsers || updated.mustChangePassword) {
+                dialog.value = false;
+                await router.push(
+                    updated.mustChangePassword
+                        ? "/account/password"
+                        : "/candidates",
+                );
+                return;
+            }
+        }
         dialog.value = false;
         await load();
         toast.add({
@@ -205,9 +227,7 @@ function remove(user: User) {
                 header="Логин" /><Column header="Роль"
                 ><template #body="{ data }"
                     ><Tag
-                        :value="
-                            data.role === 'RECRUITER' ? 'Рекрутер' : 'Менеджер'
-                        "
+                        :value="roleLabels[data.role as User['role']]"
                         severity="secondary" /></template></Column
             ><Column header="Доступ"
                 ><template #body="{ data }"
@@ -219,10 +239,12 @@ function remove(user: User) {
             ><Column header=""
                 ><template #body="{ data }"
                     ><Button
+                        v-if="canEditUser(data)"
                         icon="pi pi-pencil"
                         text
                         aria-label="Редактировать пользователя"
                         @click="edit(data)" /><Button
+                        v-if="canEditUser(data)"
                         icon="pi pi-trash"
                         text
                         severity="danger"
@@ -273,32 +295,38 @@ function remove(user: User) {
                     e
                 }}</small></label
             >
-            <div class="field">
-                <label for="user-password">{{
-                    editing
-                        ? "Новый пароль (оставьте пустым, чтобы сохранить)"
-                        : "Пароль *"
-                }}</label
+            <div v-if="editing" class="field">
+                <label for="user-password"
+                    >Новый пароль (оставьте пустым, чтобы сохранить)</label
                 ><Password
                     v-model="form.password"
                     input-id="user-password"
                     toggle-mask
                     :feedback="false"
                     :disabled="saving"
-                    :required="!editing"
                     autocomplete="new-password"
                     :invalid="!!errors.password"
                 /><small class="error" v-for="e in errors.password">{{
                     e
                 }}</small>
             </div>
+            <Message v-if="!editing" severity="info" size="small"
+                >Временный пароль: <strong>QazWsx123456</strong>. При первом
+                входе пользователь должен будет задать свой пароль.</Message
+            >
+            <p v-else class="muted">
+                Если задать новый пароль, действующие сеансы пользователя
+                завершатся. При следующем входе он должен будет сменить этот
+                пароль.
+            </p>
             <div class="field">
-                <label for="user-role">Роль *</label
+                <label id="user-role-label" for="user-role">Роль *</label
                 ><Select
                     input-id="user-role"
+                    aria-labelledby="user-role-label"
                     :disabled="saving"
                     v-model="form.role"
-                    :options="roles"
+                    :options="assignableRoles"
                     option-label="label"
                     option-value="value"
                 /><small class="error" v-for="e in errors.role">{{ e }}</small>

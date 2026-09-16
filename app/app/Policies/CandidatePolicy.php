@@ -15,21 +15,21 @@ class CandidatePolicy
 
     public function view(User $user, Candidate $candidate): bool
     {
-        return $user->role === UserRole::RECRUITER || $candidate->hiringManagers()->where('users.id', $user->id)->exists();
+        return $user->managesCandidates() || $candidate->hiringManagers()->where('users.id', $user->id)->exists();
     }
 
     public function create(User $user): bool
     {
-        return in_array($user->role, [UserRole::RECRUITER, UserRole::MANAGER], true);
+        return in_array($user->role, [UserRole::ADMIN, UserRole::RECRUITER, UserRole::MANAGER], true);
     }
 
     public function update(User $user, Candidate $candidate): bool
     {
-        return $user->role === UserRole::RECRUITER;
+        return $user->managesCandidates();
     }
 
     public function delete(User $user, Candidate $candidate): bool
     {
-        return $user->role === UserRole::RECRUITER;
+        return $user->managesCandidates();
     }
 }

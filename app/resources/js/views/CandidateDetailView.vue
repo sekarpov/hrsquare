@@ -116,7 +116,7 @@ async function create() {
                 ><CandidateStatus :status="candidate.status"
             /></template>
             <Button
-                v-if="auth.isRecruiter"
+                v-if="auth.canManageCandidates"
                 label="Редактировать"
                 icon="pi pi-pencil"
                 severity="secondary"

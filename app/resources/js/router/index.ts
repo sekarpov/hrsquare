@@ -12,6 +12,10 @@ export const router = createRouter({
             component: () => import("../views/LoginView.vue"),
             meta: { public: true },
         },
+        {
+            path: "/account/password",
+            component: () => import("../views/PasswordView.vue"),
+        },
         { path: "/", redirect: "/candidates" },
         {
             path: "/candidates",
@@ -28,7 +32,7 @@ export const router = createRouter({
         {
             path: "/users",
             component: () => import("../views/UsersView.vue"),
-            meta: { recruiter: true },
+            meta: { managesUsers: true },
         },
         {
             path: "/forbidden",
@@ -45,6 +49,8 @@ router.beforeEach(async (to) => {
     const auth = useAuth();
     await auth.hydrate();
     if (!to.meta.public && !auth.user) return "/login";
+    if (auth.user?.mustChangePassword && to.path !== "/account/password")
+        return "/account/password";
     if (to.path === "/login" && auth.user) return "/candidates";
-    if (to.meta.recruiter && !auth.isRecruiter) return "/forbidden";
+    if (to.meta.managesUsers && !auth.canManageUsers) return "/forbidden";
 });

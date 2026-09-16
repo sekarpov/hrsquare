@@ -28,8 +28,11 @@ async function logout() {
     }
 }
 function apiError(event: Event) {
-    const { status, message } = (event as CustomEvent).detail;
-    if (status === 401) {
+    const { status, message, code } = (event as CustomEvent).detail;
+    if (code === "PASSWORD_CHANGE_REQUIRED") {
+        if (auth.user) auth.user.mustChangePassword = true;
+        void router.push("/account/password");
+    } else if (status === 401) {
         const wasAuthenticated = !!auth.user;
         auth.user = null;
         if (wasAuthenticated && route.path !== "/login")

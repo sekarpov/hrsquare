@@ -9,6 +9,13 @@ export const authApi = {
         return (await http.post<{ data: User }>("/login", { login, password }))
             .data.data;
     },
+    async changePassword(data: {
+        currentPassword?: string;
+        password: string;
+        passwordConfirmation: string;
+    }) {
+        return (await http.put<{ data: User }>("/me/password", data)).data.data;
+    },
     async logout() {
         await http.post("/logout");
     },

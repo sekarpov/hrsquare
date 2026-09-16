@@ -46,18 +46,23 @@ class UserController extends Controller
 
     public function store(UserRequest $request, UserService $service): UserResource
     {
-        return new UserResource($service->save($request->userData()));
+        return new UserResource($service->save($request->userData(), actor: $request->user()));
     }
 
     public function update(UserRequest $request, User $user, UserService $service): UserResource
     {
-        return new UserResource($service->save($request->userData(), $user));
+        $updated = $service->save($request->userData(), $user, $request->user());
+        if ($updated->id === $request->user()->id) {
+            $request->session()->put('auth_version', $updated->auth_version);
+        }
+
+        return new UserResource($updated);
     }
 
     public function destroy(User $user, UserService $service)
     {
         Gate::authorize('delete', $user);
-        $service->delete($user);
+        $service->delete($user, request()->user());
 
         return response()->noContent();
     }

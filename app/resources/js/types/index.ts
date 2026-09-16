@@ -1,5 +1,5 @@
 export type Score = 1 | 2 | 3 | 4;
-export type UserRole = "RECRUITER" | "MANAGER";
+export type UserRole = "ADMIN" | "RECRUITER" | "MANAGER";
 export type Level = "LOW" | "MEDIUM" | "HIGH";
 export type Cell = "M1" | "S1" | "B1" | "M2" | "S2" | "B2" | "M3" | "S3" | "B3";
 export type CalibrationSignal = "NONE" | "ALIGNED" | "NEEDS_CALIBRATION";
@@ -17,6 +17,7 @@ export interface User {
     login: string;
     role: UserRole;
     isActive: boolean;
+    mustChangePassword: boolean;
     createdAt: string;
 }
 export interface UserInput {

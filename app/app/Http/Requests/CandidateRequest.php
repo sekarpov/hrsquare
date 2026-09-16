@@ -31,8 +31,15 @@ class CandidateRequest extends FormRequest
         return ['fullName' => ['required', 'string', 'max:255'], 'position' => ['required', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:255'], 'company' => ['nullable', 'string', 'max:255'], 'division' => ['nullable', 'string', 'max:255'], 'project' => ['nullable', 'string', 'max:255'],
             'status' => ['required', Rule::enum(CandidateStatus::class)],
-            'hiringManagerIds' => ['required', 'array', 'min:1'], 'hiringManagerIds.*' => ['required', 'integer', 'distinct', Rule::exists('users', 'id')->where('role', UserRole::MANAGER->value)->where('is_active', true)],
-            'recruiterIds' => ['present', 'array'], 'recruiterIds.*' => ['required', 'integer', 'distinct', Rule::exists('users', 'id')->where('role', UserRole::RECRUITER->value)->where('is_active', true)]];
+            'hiringManagerIds' => ['required', 'array', 'min:1'], 'hiringManagerIds.*' => ['required', 'integer', 'distinct', $this->participantRule(UserRole::MANAGER, 'hiringManagers')],
+            'recruiterIds' => ['present', 'array'], 'recruiterIds.*' => ['required', 'integer', 'distinct', $this->participantRule(UserRole::RECRUITER, 'recruiters')]];
+    }
+
+    private function participantRule(UserRole $role, string $relation)
+    {
+        $retained = $this->route('candidate')?->{$relation}()->pluck('users.id')->all() ?? [];
+
+        return Rule::exists('users', 'id')->where('is_active', true)->where(fn ($query) => $query->where(fn ($query) => $query->where('role', $role->value)->orWhereIn('id', $retained)));
     }
 
     public function messages(): array

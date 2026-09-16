@@ -15,6 +15,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         RateLimiter::for('login', fn (Request $request) => [Limit::perMinute(5)->by(strtolower((string) $request->input('login')).'|'.$request->ip()), Limit::perMinute(30)->by($request->ip())]);
+        RateLimiter::for('password-change', fn (Request $request) => Limit::perMinute(5)->by((string) $request->user()->id));
         Model::preventLazyLoading(! $this->app->isProduction());
     }
 }

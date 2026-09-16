@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Enums\AssessmentStatus;
 use App\Enums\CandidateStatus;
-use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -48,6 +47,6 @@ class Candidate extends Model
 
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
-        return $user->role === UserRole::RECRUITER ? $query : $query->whereHas('hiringManagers', fn (Builder $q) => $q->where('users.id', $user->id));
+        return $user->managesCandidates() ? $query : $query->whereHas('hiringManagers', fn (Builder $q) => $q->where('users.id', $user->id));
     }
 }

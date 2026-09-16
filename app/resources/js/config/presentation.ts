@@ -1,4 +1,4 @@
-import type { CandidateStatus, Level } from "../types";
+import type { CandidateStatus, Level, UserRole } from "../types";
 export const candidateStatuses: { label: string; value: CandidateStatus }[] = [
     { label: "Активный", value: "ACTIVE" },
     { label: "Нанят", value: "HIRED" },
@@ -16,3 +16,9 @@ export const formatDate = (value?: string | null) =>
               timeStyle: "short",
           })
         : "—";
+
+export const roleLabels: Record<UserRole, string> = {
+    ADMIN: "Администратор",
+    RECRUITER: "Рекрутер",
+    MANAGER: "Менеджер",
+};

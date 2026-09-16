@@ -18,6 +18,7 @@ http.interceptors.response.use(
                 new CustomEvent("api:error", {
                     detail: {
                         status,
+                        code: error.response?.data?.code,
                         message:
                             error.response?.data?.message ??
                             "Сервис недоступен. Попробуйте позже.",

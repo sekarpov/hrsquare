@@ -18,8 +18,10 @@ class CandidateService
             $recruiterIds = $request->validated('recruiterIds');
             $users = User::whereIn('id', array_unique([...$managerIds, ...$recruiterIds]))->orderBy('id')->lockForUpdate()->get()->keyBy('id');
             foreach (['hiringManagerIds' => [$managerIds, UserRole::MANAGER], 'recruiterIds' => [$recruiterIds, UserRole::RECRUITER]] as $field => [$ids, $role]) {
+                $relation = $field === 'hiringManagerIds' ? 'hiringManagers' : 'recruiters';
+                $retained = $candidate?->{$relation}()->pluck('users.id')->all() ?? [];
                 foreach ($ids as $id) {
-                    if (! isset($users[$id]) || ! $users[$id]->is_active || $users[$id]->role !== $role) {
+                    if (! isset($users[$id]) || ! $users[$id]->is_active || ($users[$id]->role !== $role && ! in_array((int) $id, $retained, true))) {
                         throw ValidationException::withMessages([$field => ['Пользователь изменён или отключён. Обновите список участников.']]);
                     }
                 }

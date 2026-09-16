@@ -1,15 +1,20 @@
 <?php
 
+use App\Http\Middleware\EnsureActiveUser;
+use App\Http\Middleware\EnsurePasswordChanged;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(web: __DIR__.'/../routes/web.php', commands: __DIR__.'/../routes/console.php', health: '/up')
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->prependToPriorityList(SubstituteBindings::class, EnsureActiveUser::class);
+        $middleware->prependToPriorityList(SubstituteBindings::class, EnsurePasswordChanged::class);
         $middleware->trustProxies(at: ['REMOTE_ADDR']);
         $middleware->redirectGuestsTo(fn () => '/login');
     })

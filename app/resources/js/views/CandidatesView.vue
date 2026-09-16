@@ -209,7 +209,7 @@ const advancedCount = computed(
         title="Кандидаты"
         :count="total"
         :description="
-            auth.isRecruiter
+            auth.canManageCandidates
                 ? 'Кандидаты и результаты интервью в одном пространстве.'
                 : 'Кандидаты, назначенные вам для оценки.'
         "
@@ -489,14 +489,14 @@ const advancedCount = computed(
                             aria-label="Открыть кандидата"
                             @click="router.push(`/candidates/${data.id}`)"
                         /><Button
-                            v-if="auth.isRecruiter"
+                            v-if="auth.canManageCandidates"
                             icon="pi pi-pencil"
                             text
                             severity="secondary"
                             aria-label="Редактировать кандидата"
                             @click="edit(data)"
                         /><Button
-                            v-if="auth.isRecruiter"
+                            v-if="auth.canManageCandidates"
                             icon="pi pi-trash"
                             text
                             severity="danger"

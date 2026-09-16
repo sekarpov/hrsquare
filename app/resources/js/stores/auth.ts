@@ -6,6 +6,11 @@ export const useAuth = defineStore("auth", () => {
     const user = ref<User | null>(null),
         initialized = ref(false);
     const isRecruiter = computed(() => user.value?.role === "RECRUITER");
+    const isAdmin = computed(() => user.value?.role === "ADMIN");
+    const canManageUsers = computed(() => isAdmin.value || isRecruiter.value);
+    const canManageCandidates = computed(
+        () => isAdmin.value || isRecruiter.value,
+    );
     async function hydrate() {
         if (initialized.value) return;
         try {
@@ -24,5 +29,15 @@ export const useAuth = defineStore("auth", () => {
         await authApi.logout();
         user.value = null;
     }
-    return { user, initialized, isRecruiter, hydrate, login, logout };
+    return {
+        user,
+        initialized,
+        isRecruiter,
+        isAdmin,
+        canManageUsers,
+        canManageCandidates,
+        hydrate,
+        login,
+        logout,
+    };
 });

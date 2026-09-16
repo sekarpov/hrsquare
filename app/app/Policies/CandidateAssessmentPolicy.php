@@ -21,7 +21,7 @@ class CandidateAssessmentPolicy
 
     public function update(User $user, CandidateAssessment $assessment): bool
     {
-        return $assessment->status === AssessmentStatus::DRAFT && $assessment->evaluator_id === $user->id && $this->view($user, $assessment);
+        return $assessment->status === AssessmentStatus::DRAFT && ($user->isAdmin() || $assessment->evaluator_id === $user->id) && $this->view($user, $assessment);
     }
 
     public function complete(User $user, CandidateAssessment $assessment): bool

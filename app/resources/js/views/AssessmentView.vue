@@ -60,7 +60,7 @@ const route = useRoute(),
 const canEdit = computed(
     () =>
         assessment.value?.status === "DRAFT" &&
-        assessment.value.evaluatorId === auth.user?.id,
+        (auth.isAdmin || assessment.value.evaluatorId === auth.user?.id),
 );
 const criteria = computed(
     () =>
@@ -160,7 +160,7 @@ function preventUnload(event: BeforeUnloadEvent) {
 onMounted(() => window.addEventListener("beforeunload", preventUnload));
 onUnmounted(() => window.removeEventListener("beforeunload", preventUnload));
 onBeforeRouteLeave(() => {
-    if (!dirty.value) return true;
+    if (!dirty.value || auth.user?.mustChangePassword) return true;
     return new Promise<boolean>((resolve) =>
         confirm.require({
             header: "Остались несохранённые изменения",
