@@ -1,0 +1,110 @@
+name: ${COMPOSE_PROJECT_NAME:-hrsquare}
+x-service: &service
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+services:
+  web:
+    <<: *service
+    image: caddy:2.11-alpine
+    ports:
+      - "${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8080}:80"
+      - "${HTTP_BIND:-127.0.0.1}:${HTTPS_PORT:-8443}:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-http://localhost}
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./app:/app:ro
+      - uploads:/app/public/storage:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD-SHELL, "wget -q -O /dev/null http://127.0.0.1:8081/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+  app:
+    <<: *service
+    build: ./docker/php
+    environment:
+      APP_ENV: production
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${POSTGRES_DB:-hrsquare}
+      DB_USERNAME: ${POSTGRES_USER:-hrsquare}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Run make init first}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Run make init first}
+    volumes:
+      - ./app:/app:ro
+      - uploads:/app/public/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, php, /usr/local/bin/healthcheck.php]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+  postgres:
+    <<: *service
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-hrsquare}
+      POSTGRES_USER: ${POSTGRES_USER:-hrsquare}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run make init first}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  redis:
+    <<: *service
+    image: redis:7.4-alpine
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Run make init first}
+    command: [sh, -ec, 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"']
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [CMD-SHELL, 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep -q PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  adminer:
+    <<: *service
+    image: adminer:5
+    profiles: [tools]
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    ports: ["127.0.0.1:8089:8080"]
+  mailpit:
+    <<: *service
+    image: axllent/mailpit:v1.29
+    profiles: [tools]
+    ports: ["127.0.0.1:8025:8025"]
+  node:
+    image: node:24-alpine
+    profiles: [build]
+    working_dir: /app
+    volumes: ["./app:/app"]
+    command: [node, --version]
+volumes:
+  postgres_data:
+  redis_data:
+  uploads:
+  caddy_data:
+  caddy_config:

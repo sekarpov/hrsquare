@@ -1,0 +1,67 @@
+---
+- name: Validate site configuration
+  ansible.builtin.assert:
+    that:
+      - site_root is match('^/opt/[a-zA-Z0-9_-]+$')
+      - site_address is match('^https?://[^\s]+$')
+      - "'example.com' not in site_address"
+    fail_msg: Set a real site_address in hosts.yml, or use http://:80 for IP-only deployment.
+- name: Create deployment directory
+  ansible.builtin.file:
+    path: "{{ site_root }}"
+    state: directory
+    mode: '0755'
+- name: Copy application and infrastructure
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../{{ item }}"
+    dest: "{{ site_root }}/"
+    mode: preserve
+    directory_mode: '0755'
+  loop: [docker-compose.yml, docker, app, scripts, .env.example]
+- name: Create uploads mountpoint inside read-only application bind mount
+  ansible.builtin.file:
+    path: "{{ site_root }}/app/public/storage"
+    state: directory
+    mode: '0755'
+- name: Check environment file
+  ansible.builtin.stat:
+    path: "{{ site_root }}/.env"
+  register: site_env
+- name: Generate environment once
+  ansible.builtin.command:
+    cmd: python3 scripts/init.py
+    chdir: "{{ site_root }}"
+  when: not site_env.stat.exists
+- name: Configure public endpoint
+  ansible.builtin.lineinfile:
+    path: "{{ site_root }}/.env"
+    regexp: "^{{ item.key }}="
+    line: "{{ item.key }}={{ item.value }}"
+    mode: '0600'
+  loop:
+    - {key: SITE_ADDRESS, value: "{{ site_address }}"}
+    - {key: HTTP_BIND, value: '0.0.0.0'}
+    - {key: HTTP_PORT, value: '80'}
+    - {key: HTTPS_PORT, value: '443'}
+- name: Validate Compose
+  ansible.builtin.command:
+    cmd: docker compose config --quiet
+    chdir: "{{ site_root }}"
+  changed_when: false
+- name: Start application and wait for health checks
+  ansible.builtin.command:
+    cmd: docker compose up -d --build --wait --wait-timeout 180
+    chdir: "{{ site_root }}"
+  register: compose_result
+  changed_when: "'Started' in compose_result.stderr or 'Recreated' in compose_result.stderr or 'Created' in compose_result.stderr"
+- name: Reload Caddy configuration
+  ansible.builtin.command:
+    cmd: docker compose exec -T web caddy reload --config /etc/caddy/Caddyfile
+    chdir: "{{ site_root }}"
+  changed_when: false
+- name: Schedule daily PostgreSQL backup
+  ansible.builtin.cron:
+    name: HRSquare PostgreSQL backup
+    minute: '15'
+    hour: '2'
+    job: "{{ site_root }}/scripts/backup.sh >> /var/log/hrsquare-backup.log 2>&1"

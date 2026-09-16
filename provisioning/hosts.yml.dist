@@ -1,0 +1,10 @@
+all:
+  children:
+    site:
+      hosts:
+        hrsquare:
+          ansible_host: 216.57.108.236
+          ansible_user: root
+          ansible_port: 22
+      vars:
+        site_address: https://bi.sekarpov.online

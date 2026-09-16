@@ -1,0 +1,18 @@
+{$SITE_ADDRESS} {
+    root * /app/public
+    encode zstd gzip
+    header {
+        X-Content-Type-Options nosniff
+        Referrer-Policy strict-origin-when-cross-origin
+        X-Frame-Options DENY
+        -Server
+    }
+    @private path /.env* /.git/* /composer.* /vendor/*
+    respond @private 404
+    php_fastcgi app:9000
+    file_server
+    log
+}
+http://:8081 {
+    respond /healthz "ok" 200
+}

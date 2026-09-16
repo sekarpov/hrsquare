@@ -1,0 +1,7 @@
+---
+- name: Provision HRSquare
+  hosts: site
+  become: true
+  roles:
+    - docker
+    - site

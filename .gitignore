@@ -1,0 +1,5 @@
+.env
+provisioning/hosts.yml
+provisioning/group_vars/site/vault.yml
+backups/
+.idea/
