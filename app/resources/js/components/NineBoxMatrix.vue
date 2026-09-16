@@ -107,6 +107,23 @@ const selected = computed(() => props.selectedCell);
                         ]"
                         @click="emit('select', cell)"
                     >
+                        <svg
+                            v-if="selected === cell"
+                            class="matrix-selection-accent"
+                            viewBox="0 0 100 100"
+                            preserveAspectRatio="none"
+                            aria-hidden="true"
+                            focusable="false"
+                        >
+                            <rect
+                                x="1"
+                                y="1"
+                                width="98"
+                                height="98"
+                                rx="2"
+                                pathLength="100"
+                            />
+                        </svg>
                         <div class="matrix-cell-header">
                             <strong class="matrix-code">{{ cell }}</strong>
                             <span
@@ -339,9 +356,66 @@ const selected = computed(() => props.selectedCell);
         inset 0 0 0 1px rgb(255 255 255 / 55%),
         0 0 0 1px var(--nine-box-on-blue),
         0 3px 10px rgb(20 43 122 / 16%);
+    isolation: isolate;
+}
+.matrix-selection-accent {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+.matrix-selection-accent rect {
+    fill: none;
+    stroke: var(--nine-box-on-blue);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-dasharray: 28 22;
+    vector-effect: non-scaling-stroke;
+    opacity: 1;
+    filter: drop-shadow(0 0 2px rgb(255 255 255 / 75%));
+    animation: selected-result-trace 2.4s linear infinite;
 }
 .matrix-cell.selected .matrix-selected-label {
     box-shadow: 0 1px 3px rgb(20 43 122 / 10%);
+    animation:
+        selected-result-reveal 400ms ease-out both,
+        selected-result-label-glow 2.4s ease-in-out 400ms infinite;
+}
+@keyframes selected-result-label-glow {
+    0%,
+    100% {
+        box-shadow: 0 1px 3px rgb(20 43 122 / 10%);
+    }
+    50% {
+        box-shadow:
+            0 0 0 3px rgb(255 255 255 / 35%),
+            0 2px 10px rgb(20 43 122 / 24%);
+    }
+}
+@keyframes selected-result-trace {
+    to {
+        stroke-dashoffset: -100;
+    }
+}
+@keyframes selected-result-reveal {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .matrix-selection-accent {
+        display: none;
+    }
+    .matrix-selection-accent rect,
+    .matrix-cell.selected .matrix-selected-label {
+        animation: none;
+    }
 }
 .matrix-cell:enabled:hover {
     filter: brightness(1.04);
