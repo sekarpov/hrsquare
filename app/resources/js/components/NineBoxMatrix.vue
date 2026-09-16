@@ -257,13 +257,13 @@ const selected = computed(() => props.selectedCell);
 .matrix-selected-label {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 5px 7px;
-    border-radius: 6px;
-    background: var(--nine-box-foreground);
-    color: var(--nine-box-on-blue);
+    gap: 6px;
+    padding: 6px 9px;
+    border-radius: 999px;
+    background: var(--nine-box-on-blue);
+    color: var(--nine-box-foreground);
     font-size: 10px;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.3;
 }
 .matrix-selected-label .pi {
@@ -333,28 +333,15 @@ const selected = computed(() => props.selectedCell);
 }
 .matrix-cell.selected {
     transform: none;
-    border: 3px solid var(--nine-box-foreground);
-    padding: 14px;
+    border: 2px solid var(--nine-box-foreground);
+    padding: 15px;
     box-shadow:
-        inset 0 0 0 999px rgb(20 43 122 / 8%),
-        0 0 0 2px var(--nine-box-on-blue),
-        0 0 0 4px var(--nine-box-foreground);
-}
-.matrix-cell.selected .matrix-code {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 30px;
-    min-height: 28px;
-    padding: 4px;
-    border-radius: 6px;
-    background: var(--nine-box-on-blue);
-    color: var(--nine-box-foreground);
-    font-size: 13px;
+        inset 0 0 0 1px rgb(255 255 255 / 55%),
+        0 0 0 1px var(--nine-box-on-blue),
+        0 3px 10px rgb(20 43 122 / 16%);
 }
 .matrix-cell.selected .matrix-selected-label {
-    padding: 7px 8px;
-    box-shadow: 0 2px 5px rgb(20 43 122 / 15%);
+    box-shadow: 0 1px 3px rgb(20 43 122 / 10%);
 }
 .matrix-cell:enabled:hover {
     filter: brightness(1.04);
