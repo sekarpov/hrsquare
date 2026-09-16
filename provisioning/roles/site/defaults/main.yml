@@ -1,2 +1,4 @@
 site_root: /opt/hrsquare
 site_address: http://:80
+deploy_user: deploy
+deploy_public_keys: []

@@ -6,6 +6,29 @@
       - site_address is match('^https?://[^\s]+$')
       - "'example.com' not in site_address"
     fail_msg: Set a real site_address in hosts.yml, or use http://:80 for IP-only deployment.
+- name: Create deployment account
+  ansible.builtin.user:
+    name: "{{ deploy_user }}"
+    password: '!'
+    groups: docker
+    append: true
+    shell: /bin/bash
+    create_home: true
+- name: Create deployment SSH directory
+  ansible.builtin.file:
+    path: "/home/{{ deploy_user }}/.ssh"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: '0700'
+- name: Install managed deployment public keys
+  ansible.builtin.copy:
+    content: "{{ deploy_public_keys | join('\n') }}\n"
+    dest: "/home/{{ deploy_user }}/.ssh/authorized_keys"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: '0600'
+  when: deploy_public_keys | length > 0
 - name: Create deployment directory
   ansible.builtin.file:
     path: "{{ site_root }}"
@@ -43,6 +66,13 @@
     - {key: HTTP_BIND, value: '0.0.0.0'}
     - {key: HTTP_PORT, value: '80'}
     - {key: HTTPS_PORT, value: '443'}
+- name: Grant deployment account ownership of project files
+  ansible.builtin.file:
+    path: "{{ site_root }}"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    recurse: true
 - name: Validate Compose
   ansible.builtin.command:
     cmd: docker compose config --quiet
