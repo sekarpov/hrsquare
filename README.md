@@ -82,7 +82,10 @@ docker compose exec -T postgres sh -ec 'pg_restore --exit-on-error --no-owner --
 
 ## HRSquare Application
 
-HRSquare — рабочее пространство для ведения кандидатов и оценки результатов и потенциала по 9-Box. Приложение установлено непосредственно в `app/`: Laravel 12, PHP 8.4, Vue 3 SPA, TypeScript, Vite, Vue Router, Pinia, Axios и PrimeVue. Frontend находится в `app/resources/js`, готовые assets — `app/public/build`. Node используется для сборки и не работает постоянно. Backend читает DB/Redis environment из существующего Compose; главным конфигурационным файлом остаётся корневой `.env`, отдельный `app/.env` не требуется.
+HRSquare — рабочее пространство для ведения кандидатов и оценки результатов и потенциала по 9-Box. Приложение установлено непосредственно в `app/`: Laravel 12, PHP 8.4, Vue 3 SPA, TypeScript, Vite, Vue Router, Pinia, Axios, PrimeVue и Tailwind CSS. Frontend находится в `app/resources/js`, готовые assets — `app/public/build`. Node используется для сборки и не работает постоянно. Backend читает DB/Redis environment из существующего Compose; главным конфигурационным файлом остаётся корневой `.env`, отдельный `app/.env` не требуется.
+
+Форма Candidate Assessment использует готовые Card, Accordion, Message, RadioButton и поля PrimeVue; компоновка и оформление выполняются через Tailwind CSS 4 с официальным Vite-плагином. Классы Tailwind имеют префикс `tw:`, Preflight отключён, чтобы сохранить оформление существующих страниц и матрицы. Новые стандартные элементы следует брать из PrimeVue, а расположение, отступы и адаптивность задавать через Tailwind. Кастомный NineBoxMatrix сохраняет утверждённые цвета, тексты и mapping.
+
 
 ### Установка и запуск
 

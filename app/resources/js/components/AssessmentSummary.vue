@@ -7,25 +7,39 @@ const levelLabel = (level: string | null | undefined) =>
     "Нет оценки";
 </script>
 <template>
-    <div class="summary-scores">
-        <div>
-            <small>RESULT</small
-            ><strong>{{ assessment?.resultAverage?.toFixed(2) ?? "—" }}</strong
-            ><span>{{ levelLabel(assessment?.resultLevel) }}</span>
+    <div class="summary-scores tw:grid tw:grid-cols-3 tw:gap-3">
+        <div class="tw:rounded-xl tw:bg-slate-50 tw:p-3 tw:text-center">
+            <small
+                class="tw:text-[10px] tw:font-semibold tw:tracking-wide tw:text-slate-500"
+                >RESULT</small
+            ><strong
+                class="tw:text-2xl tw:font-semibold tw:tabular-nums tw:text-slate-900"
+                >{{ assessment?.resultAverage?.toFixed(2) ?? "—" }}</strong
+            ><span class="tw:text-[10px] tw:text-slate-500">{{
+                levelLabel(assessment?.resultLevel)
+            }}</span>
         </div>
-        <div>
-            <small>POTENTIAL</small
-            ><strong>{{
-                assessment?.potentialAverage?.toFixed(2) ?? "—"
-            }}</strong
-            ><span>{{ levelLabel(assessment?.potentialLevel) }}</span>
+        <div class="tw:rounded-xl tw:bg-slate-50 tw:p-3 tw:text-center">
+            <small
+                class="tw:text-[10px] tw:font-semibold tw:tracking-wide tw:text-slate-500"
+                >POTENTIAL</small
+            ><strong
+                class="tw:text-2xl tw:font-semibold tw:tabular-nums tw:text-slate-900"
+                >{{ assessment?.potentialAverage?.toFixed(2) ?? "—" }}</strong
+            ><span class="tw:text-[10px] tw:text-slate-500">{{
+                levelLabel(assessment?.potentialLevel)
+            }}</span>
         </div>
-        <div>
-            <small>9-BOX</small
-            ><strong class="box-code">{{
-                assessment?.nineBoxCell ?? "—"
-            }}</strong
-            ><span>Результат оценки</span>
+        <div class="tw:rounded-xl tw:bg-slate-50 tw:p-3 tw:text-center">
+            <small
+                class="tw:text-[10px] tw:font-semibold tw:tracking-wide tw:text-slate-500"
+                >9-BOX</small
+            ><strong
+                class="box-code tw:text-2xl tw:font-semibold tw:text-indigo-600"
+                >{{ assessment?.nineBoxCell ?? "—" }}</strong
+            ><span class="tw:text-[10px] tw:text-slate-500"
+                >Результат оценки</span
+            >
         </div>
     </div>
     <NineBoxMatrix
