@@ -1,0 +1,28 @@
+---
+- name: Configure HRSquare deployment access
+  hosts: site
+  become: true
+  tasks:
+    - name: Require deployment public keys
+      ansible.builtin.assert:
+        that: (deploy_public_keys | default([])) | length > 0
+        fail_msg: Set deploy_public_keys in hosts.yml to your SSH public key(s).
+    - name: Configure deployment account and keys
+      ansible.builtin.include_role:
+        name: site
+        tasks_from: deploy_access
+    - name: Check provisioned directory
+      ansible.builtin.stat:
+        path: "{{ site_root | default('/opt/hrsquare') }}"
+      register: provisioned_root
+    - name: Require initial provisioning
+      ansible.builtin.assert:
+        that: provisioned_root.stat.isdir | default(false)
+        fail_msg: Run initial provisioning before authorizing deployment access.
+    - name: Grant deployment account ownership
+      ansible.builtin.file:
+        path: "{{ site_root | default('/opt/hrsquare') }}"
+        state: directory
+        owner: "{{ deploy_user | default('deploy') }}"
+        group: "{{ deploy_user | default('deploy') }}"
+        recurse: true

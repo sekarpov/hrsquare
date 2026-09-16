@@ -35,6 +35,8 @@ ssh-keygen -t ed25519 -f ~/.ssh/hrsquare_deploy -C hrsquare-deploy
 
 ```sh
 make -C provisioning site
+# Если сервер уже подготовлен, достаточно настроить доступ без перезапуска сайта:
+make -C provisioning authorize-deploy
 ```
 
 Это создаёт пользователя `deploy`, добавляет его в группу Docker и передаёт ему владение `/opt/hrsquare`, сохраняя права `.env` 0600. Участник группы Docker фактически имеет административные возможности на сервере; выделяйте этот доступ доверенным операторам и Jenkins.
@@ -84,3 +86,17 @@ ssh deploy@216.57.108.236 'cd /opt/hrsquare && docker compose logs --tail=100 ap
 5. Выполните первый запуск для появления параметра `DEPLOY`. Затем **Build with Parameters → DEPLOY=true**. По умолчанию выполняются только проверки. Запуск с DEPLOY обновляет production из выбранного checkout; предоставляйте доступ к запуску только доверенным пользователям и веткам. Для Multibranch храните Jenkinsfile с production credential только в доверенных ветках.
 
 Пароли PostgreSQL/Redis Jenkins не нужны: используется существующий `.env` на сервере. Параллельные сборки одной job отключены, а серверная блокировка также защищает от одновременного запуска с локальной машины или другой job.
+
+## Permission denied (publickey,password)
+
+Эта ошибка возникает до выполнения скрипта на сервере: SSH не принял ключ для пользователя deploy. Добавьте публичный ключ в `deploy_public_keys` файла `provisioning/hosts.yml`, затем выполните `make -C provisioning authorize-deploy` с административным SSH-доступом. Эта команда настраивает пользователя, authorized_keys и владение файлами без пересборки или перезапуска приложения.
+
+Если приватный ключ не загружен в SSH agent, укажите его явно:
+
+```sh
+make deploy SSH_KEY=~/.ssh/id_rsa
+# Для отдельного ключа:
+make deploy SSH_KEY=~/.ssh/hrsquare_deploy
+```
+
+Для ключа с passphrase сначала используйте `ssh-add`: деплой не запрашивает пароль интерактивно. Не передавайте `.pub` в SSH_KEY — нужен путь к приватному ключу. Для диагностики: `ssh -v -o IdentitiesOnly=yes -i ~/.ssh/id_rsa deploy@216.57.108.236 true`.

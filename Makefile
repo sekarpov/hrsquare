@@ -2,7 +2,8 @@ HOST ?= 216.57.108.236
 PORT ?= 22
 DEPLOY_USER ?= deploy
 DEPLOY_PATH ?= /opt/hrsquare
-export HOST PORT DEPLOY_USER DEPLOY_PATH
+SSH_KEY ?=
+export HOST PORT DEPLOY_USER DEPLOY_PATH SSH_KEY
 
 .PHONY: init config up down logs ps tools backup check
 init:
