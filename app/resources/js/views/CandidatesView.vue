@@ -1,20 +1,22 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted, watch } from "vue";
+import { computed, ref, reactive, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import Button from "primevue/button";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
-import Tag from "primevue/tag";
 import Paginator from "primevue/paginator";
 import Skeleton from "primevue/skeleton";
-import Message from "primevue/message";
 import CandidateForm from "../components/CandidateForm.vue";
-import UserMultiSelect from "../components/UserMultiSelect.vue";
+import PageHeader from "../components/PageHeader.vue";
+import EmptyState from "../components/EmptyState.vue";
+import CandidateStatus from "../components/CandidateStatus.vue";
+import RequestState from "../components/RequestState.vue";
 import { usersApi } from "../api/users";
 import { candidatesApi } from "../api/candidates";
 import { errorMessage, fieldErrors } from "../api/http";
+import { candidateStatuses } from "../config/presentation";
 import { useAuth } from "../stores/auth";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
@@ -54,11 +56,7 @@ let timer: ReturnType<typeof setTimeout>;
 let version = 0;
 const levels = ["LOW", "MEDIUM", "HIGH"],
     cells = ["M1", "S1", "B1", "M2", "S2", "B2", "M3", "S3", "B3"],
-    statuses = [
-        { label: "Активный", value: "ACTIVE" },
-        { label: "Нанят", value: "HIRED" },
-        { label: "Отклонён", value: "REJECTED" },
-    ];
+    statuses = candidateStatuses;
 const statusLabel = (s: string) =>
     statuses.find((x) => x.value === s)?.label ?? s;
 const date = (s: string | null | undefined) =>
@@ -115,12 +113,19 @@ function remove(c: Candidate) {
         header: "Удалить кандидата?",
         message: `${c.fullName}. Кандидатов с историей оценок можно только перевести в статус «Отклонён».`,
         icon: "pi pi-exclamation-triangle",
+        acceptProps: { severity: "danger" },
         acceptLabel: "Удалить",
         rejectLabel: "Отмена",
+        rejectProps: { severity: "secondary" },
         accept: async () => {
             try {
                 await candidatesApi.remove(c.id);
                 await load();
+                toast.add({
+                    severity: "success",
+                    summary: "Кандидат удалён",
+                    life: 2500,
+                });
             } catch (e) {
                 toast.add({
                     severity: "error",
@@ -152,251 +157,356 @@ function reset() {
     for (const key of Object.keys(filters))
         if (!["sort", "direction"].includes(key)) filters[key] = null;
 }
+const filterLabels: Record<string, string> = {
+    search: "Поиск",
+    status: "Статус",
+    city: "Город",
+    company: "Компания",
+    resultLevel: "RESULT",
+    potentialLevel: "POTENTIAL",
+    nineBoxCell: "9-Box",
+    position: "Должность",
+    division: "Дивизион",
+    project: "Проект",
+    managerId: "Менеджер",
+    recruiterId: "Рекрутер",
+};
+const activeFilters = computed(() =>
+    Object.entries(filterLabels)
+        .filter(([key]) => filters[key] != null && filters[key] !== "")
+        .map(([key, label]) => ({
+            key,
+            label,
+            value:
+                key === "status"
+                    ? statusLabel(String(filters[key]))
+                    : key === "managerId"
+                      ? (managers.value.find((u) => u.id === filters[key])
+                            ?.fullName ?? filters[key])
+                      : key === "recruiterId"
+                        ? (recruiters.value.find((u) => u.id === filters[key])
+                              ?.fullName ?? filters[key])
+                        : filters[key],
+        })),
+);
+const advancedCount = computed(
+    () =>
+        activeFilters.value.filter((f) =>
+            [
+                "city",
+                "company",
+                "division",
+                "project",
+                "position",
+                "managerId",
+                "recruiterId",
+            ].includes(f.key),
+        ).length,
+);
 </script>
 <template>
-    <div class="page-header">
-        <div>
-            <div class="eyebrow">РАБОЧЕЕ ПРОСТРАНСТВО</div>
-            <h1>
-                Кандидаты <span class="count">{{ total }}</span>
-            </h1>
-            <p>
-                {{
-                    auth.isRecruiter
-                        ? "Все кандидаты и результаты оценки в одном месте."
-                        : "Кандидаты, назначенные вам для оценки."
-                }}
-            </p>
-        </div>
+    <PageHeader
+        title="Кандидаты"
+        :count="total"
+        :description="
+            auth.isRecruiter
+                ? 'Кандидаты и результаты интервью в одном пространстве.'
+                : 'Кандидаты, назначенные вам для оценки.'
+        "
+    >
         <Button
             label="Добавить кандидата"
             icon="pi pi-plus"
             @click="edit(null)"
         />
-    </div>
-    <section class="panel filters">
+    </PageHeader>
+    <section class="panel filters" aria-label="Фильтры кандидатов">
         <div class="filter-row">
             <div class="search-field">
-                <i class="pi pi-search" /><InputText
+                <i class="pi pi-search" aria-hidden="true" /><InputText
                     v-model="filters.search"
-                    placeholder="Поиск по имени и данным кандидата"
+                    placeholder="Поиск по ФИО кандидата..."
                     aria-label="Поиск кандидатов"
                 />
             </div>
+        </div>
+        <div class="filter-row primary-filters">
             <Select
                 v-model="filters.status"
                 :options="statuses"
                 option-label="label"
                 option-value="value"
                 placeholder="Статус"
+                aria-label="Статус"
                 show-clear
-            /><InputText
-                v-model="filters.city"
-                placeholder="Город"
-                aria-label="Город"
-            /><InputText
-                v-model="filters.company"
-                placeholder="Компания"
-                aria-label="Компания"
             />
-        </div>
-        <div class="filter-row secondary-filters">
             <Select
                 v-model="filters.resultLevel"
                 :options="levels"
                 placeholder="RESULT"
+                aria-label="Уровень RESULT"
                 show-clear
-            /><Select
+            />
+            <Select
                 v-model="filters.potentialLevel"
                 :options="levels"
                 placeholder="POTENTIAL"
+                aria-label="Уровень POTENTIAL"
                 show-clear
-            /><Select
+            />
+            <Select
                 v-model="filters.nineBoxCell"
                 :options="cells"
                 placeholder="9-Box"
+                aria-label="Ячейка 9-Box"
                 show-clear
-            /><Button
-                label="Ещё фильтры"
+            />
+            <Button
+                :label="`Ещё фильтры${advancedCount ? ' (' + advancedCount + ')' : ''}`"
                 icon="pi pi-sliders-h"
                 severity="secondary"
                 text
+                :aria-expanded="more"
+                aria-controls="advanced-filters"
                 @click="more = !more"
-            /><Button
-                label="Сбросить"
+            />
+        </div>
+        <div v-if="more" id="advanced-filters" class="advanced-filters">
+            <label
+                v-for="field in [
+                    { key: 'city', label: 'Город' },
+                    { key: 'company', label: 'Компания' },
+                    { key: 'division', label: 'Дивизион' },
+                    { key: 'project', label: 'Проект' },
+                    { key: 'position', label: 'Должность' },
+                ] as const"
+                :key="field.key"
+                class="field"
+                :for="`filter-${field.key}`"
+                >{{ field.label
+                }}<InputText
+                    :id="`filter-${field.key}`"
+                    v-model="filters[field.key]"
+            /></label>
+            <div class="field">
+                <label for="filter-manager">Менеджер</label
+                ><Select
+                    input-id="filter-manager"
+                    v-model="filters.managerId"
+                    :options="managers"
+                    option-label="fullName"
+                    option-value="id"
+                    filter
+                    show-clear
+                    placeholder="Все менеджеры"
+                />
+            </div>
+            <div class="field">
+                <label for="filter-recruiter">Рекрутер</label
+                ><Select
+                    input-id="filter-recruiter"
+                    v-model="filters.recruiterId"
+                    :options="recruiters"
+                    option-label="fullName"
+                    option-value="id"
+                    filter
+                    show-clear
+                    placeholder="Все рекрутеры"
+                />
+            </div>
+        </div>
+        <div v-if="activeFilters.length" class="active-filters">
+            <button
+                v-for="filter in activeFilters"
+                :key="filter.key"
+                type="button"
+                class="filter-chip"
+                :aria-label="`Убрать фильтр ${filter.label}: ${filter.value}`"
+                @click="filters[filter.key] = null"
+            >
+                {{ filter.label }}: {{ filter.value
+                }}<i class="pi pi-times" aria-hidden="true" />
+            </button>
+            <Button
+                label="Сбросить всё"
                 severity="secondary"
                 text
+                size="small"
                 @click="reset"
             />
         </div>
-        <div v-if="more" class="filter-row advanced-filters">
-            <InputText
-                v-model="filters.position"
-                placeholder="Должность"
-            /><InputText
-                v-model="filters.division"
-                placeholder="Дивизион"
-            /><InputText
-                v-model="filters.project"
-                placeholder="Проект"
-            /><Select
-                v-model="filters.managerId"
-                :options="managers"
-                option-label="fullName"
-                option-value="id"
-                filter
-                placeholder="Менеджер"
-                show-clear
-            /><Select
-                v-model="filters.recruiterId"
-                :options="recruiters"
-                option-label="fullName"
-                option-value="id"
-                filter
-                placeholder="Рекрутер"
-                show-clear
-            />
-        </div>
     </section>
-    <Message v-if="failure" severity="error"
-        >{{ failure }} <Button label="Повторить" text @click="load"
-    /></Message>
-    <section class="panel table-panel">
-        <div v-if="loading" class="skeleton-list">
-            <div v-for="n in 7" :key="n" class="skeleton-row">
-                <Skeleton width="24%" height="24px" /><Skeleton
+    <div class="results-meta" aria-live="polite">
+        <span>{{ loading ? "Ищем кандидатов…" : `Найдено: ${total}` }}</span
+        ><span>Текущая оценка — последняя завершённая</span>
+    </div>
+    <RequestState v-if="failure" :message="failure" @retry="load" />
+    <section v-else class="panel table-panel" :aria-busy="loading">
+        <div
+            v-if="loading"
+            class="skeleton-list"
+            role="status"
+            aria-label="Загрузка кандидатов"
+        >
+            <div v-for="n in 6" :key="n" class="skeleton-row">
+                <Skeleton width="24%" height="32px" /><Skeleton
                     width="20%"
                 /><Skeleton width="15%" /><Skeleton width="10%" />
             </div>
         </div>
+        <EmptyState
+            v-else-if="!candidates.length"
+            :title="
+                activeFilters.length
+                    ? 'Ничего не найдено'
+                    : 'Кандидатов пока нет'
+            "
+            :description="
+                activeFilters.length
+                    ? 'Попробуйте изменить или сбросить фильтры.'
+                    : 'Добавьте первого кандидата, чтобы начать работу с оценками.'
+            "
+            icon="pi pi-users"
+        >
+            <Button
+                v-if="activeFilters.length"
+                label="Сбросить фильтры"
+                severity="secondary"
+                @click="reset"
+            /><Button
+                v-else
+                label="Добавить кандидата"
+                icon="pi pi-plus"
+                @click="edit(null)"
+            />
+        </EmptyState>
         <DataTable
             v-else
             :value="candidates"
             lazy
             scrollable
-            :table-style="{ minWidth: '1700px' }"
+            :table-style="{ minWidth: '1260px' }"
             data-key="id"
+            :sort-field="filters.sort"
+            :sort-order="filters.direction === 'asc' ? 1 : -1"
             @sort="sort"
-            ><template #empty
-                ><div class="empty-state">
-                    <i class="pi pi-users" />
-                    <h3>Кандидаты не найдены</h3>
-                    <p>
-                        Измените фильтры{{
-                            auth.isRecruiter
-                                ? " или добавьте первого кандидата"
-                                : ""
-                        }}.
-                    </p>
-                    <Button
-                        label="Сбросить фильтры"
-                        severity="secondary"
-                        @click="reset"
-                    /></div></template
-            ><Column field="fullName" header="ФИО" sortable frozen
+        >
+            <Column field="fullName" header="Кандидат" sortable frozen
+                ><template #body="{ data }"
+                    ><div class="table-primary">
+                        <RouterLink
+                            :to="`/candidates/${data.id}`"
+                            class="candidate-name"
+                            >{{ data.fullName }}</RouterLink
+                        ><span class="table-secondary">{{
+                            data.position
+                        }}</span>
+                    </div></template
+                ></Column
+            >
+            <Column field="company" header="Организация" sortable
+                ><template #body="{ data }"
+                    ><div class="table-stack">
+                        <span>{{ data.company || "Компания не указана" }}</span
+                        ><span class="table-secondary"
+                            >Дивизион: {{ data.division || "—" }}</span
+                        ><span class="table-secondary"
+                            >Проект: {{ data.project || "—" }}</span
+                        >
+                    </div></template
+                ></Column
+            >
+            <Column field="city" header="Город" sortable
+                ><template #body="{ data }">{{
+                    data.city || "—"
+                }}</template></Column
+            >
+            <Column header="Участники найма"
+                ><template #body="{ data }"
+                    ><div class="table-stack">
+                        <small class="muted">Менеджеры</small>
+                        <div class="people-chips">
+                            <span
+                                v-for="u in data.hiringManagers"
+                                :key="u.id"
+                                class="chip"
+                                >{{ u.fullName }}</span
+                            ><span v-if="!data.hiringManagers.length">—</span>
+                        </div>
+                        <small class="muted">Рекрутеры</small>
+                        <div class="people-chips">
+                            <span
+                                v-for="u in data.recruiters"
+                                :key="u.id"
+                                class="chip"
+                                >{{ u.fullName }}</span
+                            ><span v-if="!data.recruiters.length">—</span>
+                        </div>
+                    </div></template
+                ></Column
+            >
+            <Column field="status" header="Статус"
+                ><template #body="{ data }"
+                    ><CandidateStatus :status="data.status" /></template
+            ></Column>
+            <Column header="Оценка"
+                ><template #body="{ data }"
+                    ><div class="table-stack">
+                        <span class="level"
+                            >RESULT ·
+                            {{
+                                data.currentAssessment?.resultLevel ?? "—"
+                            }}</span
+                        ><span class="level"
+                            >POTENTIAL ·
+                            {{
+                                data.currentAssessment?.potentialLevel ?? "—"
+                            }}</span
+                        ><small class="muted">{{
+                            date(data.currentAssessment?.completedAt)
+                        }}</small>
+                    </div></template
+                ></Column
+            >
+            <Column header="9-Box"
                 ><template #body="{ data }"
                     ><RouterLink
-                        :to="`/candidates/${data.id}`"
-                        class="candidate-name"
-                        >{{ data.fullName }}</RouterLink
-                    ></template
-                ></Column
-            ><Column field="position" header="Должность" sortable /><Column
-                field="city"
-                header="Город"
-                sortable /><Column
-                field="company"
-                header="Компания"
-                sortable /><Column field="division" header="Дивизион" /><Column
-                field="project"
-                header="Проект" /><Column header="Менеджеры"
-                ><template #body="{ data }"
-                    ><div class="people-chips">
-                        <span
-                            v-for="u in data.hiringManagers"
-                            :key="u.id"
-                            class="chip"
-                            v-tooltip="u.fullName"
-                            >{{ u.fullName }}</span
-                        >
-                    </div></template
-                ></Column
-            ><Column header="Рекрутеры"
-                ><template #body="{ data }"
-                    ><div class="people-chips">
-                        <span
-                            v-for="u in data.recruiters"
-                            :key="u.id"
-                            class="chip"
-                            >{{ u.fullName }}</span
-                        >
-                    </div></template
-                ></Column
-            ><Column field="status" header="Статус"
-                ><template #body="{ data }"
-                    ><Tag
-                        :value="statusLabel(data.status)"
-                        :severity="
-                            data.status === 'HIRED'
-                                ? 'success'
-                                : data.status === 'REJECTED'
-                                  ? 'secondary'
-                                  : 'info'
-                        " /></template></Column
-            ><Column header="RESULT" frozen align-frozen="right"
-                ><template #body="{ data }"
-                    ><span
-                        :class="`level level-${data.currentAssessment?.resultLevel}`"
-                        >{{ data.currentAssessment?.resultLevel ?? "—" }}</span
-                    ></template
-                ></Column
-            ><Column header="POTENTIAL" frozen align-frozen="right"
-                ><template #body="{ data }"
-                    ><span
-                        :class="`level level-${data.currentAssessment?.potentialLevel}`"
-                        >{{
-                            data.currentAssessment?.potentialLevel ?? "—"
-                        }}</span
-                    ></template
-                ></Column
-            ><Column header="9-Box" frozen align-frozen="right"
-                ><template #body="{ data }"
-                    ><span
+                        v-if="data.currentAssessment"
+                        :to="`/candidates/${data.id}#current-assessment`"
                         class="box-badge"
-                        :class="`box-${data.currentAssessment?.nineBoxCell?.[0]}`"
-                        >{{ data.currentAssessment?.nineBoxCell ?? "—" }}</span
-                    ></template
+                        :aria-label="`Текущая оценка ${data.fullName}: ${data.currentAssessment.nineBoxCell}`"
+                        >{{ data.currentAssessment.nineBoxCell }}</RouterLink
+                    ><span v-else class="muted">—</span></template
                 ></Column
-            ><Column header="Последняя оценка"
-                ><template #body="{ data }">{{
-                    date(data.currentAssessment?.completedAt)
-                }}</template></Column
-            ><Column header="" frozen align-frozen="right"
+            >
+            <Column header="Действия"
                 ><template #body="{ data }"
                     ><div class="row-actions">
                         <Button
                             icon="pi pi-arrow-up-right"
                             text
-                            rounded
+                            severity="secondary"
                             aria-label="Открыть кандидата"
                             @click="router.push(`/candidates/${data.id}`)"
                         /><Button
                             v-if="auth.isRecruiter"
                             icon="pi pi-pencil"
                             text
-                            rounded
-                            aria-label="Редактировать"
+                            severity="secondary"
+                            aria-label="Редактировать кандидата"
                             @click="edit(data)"
                         /><Button
                             v-if="auth.isRecruiter"
                             icon="pi pi-trash"
-                            severity="secondary"
                             text
-                            rounded
-                            aria-label="Удалить"
+                            severity="danger"
+                            aria-label="Удалить кандидата"
                             @click="remove(data)"
-                        /></div></template></Column></DataTable
-        ><Paginator
+                        /></div></template
+            ></Column>
+        </DataTable>
+        <Paginator
+            v-if="total > 0"
             :first="(page - 1) * perPage"
             :rows="perPage"
             :total-records="total"

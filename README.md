@@ -168,3 +168,9 @@ GET /api/candidates?status=HIRED&resultLevel=HIGH&potentialLevel=MEDIUM&nineBoxC
 Unit/feature tests покрывают пороги, все 9 клеток, authentication/CSRF/rate limit, роли и прямой доступ, CRUD, неизменяемость completed, history/current, исключение drafts, фильтры current 9-Box, pagination и отсутствие N+1. UI рассчитан на desktop/tablet с горизонтальным scroll таблицы и перестроением форм.
 
 Использованы [документация Laravel 12](https://laravel.com/docs/12.x) и [официальная настройка PrimeVue с Vite](https://primevue.org/vite/).
+
+Выбранная ячейка 9-Box использует Border Beam, адаптированный из [готового Vue-компонента Inspira UI](https://inspira-ui.com/r/border-beam.json). Реализация находится в `components/ui/BorderBeam.vue`, работает через CSS motion path и маску только рамки; фон и тексты матрицы сохраняются. При `prefers-reduced-motion` движущийся акцент отключается, постоянная рамка и метка результата остаются.
+
+### Интерфейс HRSquare
+
+Единые CSS tokens и тема PrimeVue, общие заголовки и состояния страниц, компактные фильтры, сгруппированные формы, текущая оценка и история кандидата. Assessment поддерживает пошаговое заполнение, прогресс, ручное сохранение с защитой несохранённых изменений и подтверждение завершения. Полная матрица вынесена из sidebar в отдельный широкий блок. [UX/UI review, принятые решения и проверка сценариев](docs/ux-ui-review.md).

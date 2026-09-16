@@ -35,13 +35,14 @@ async function submit() {
                 HR<span>Square</span><span class="brand-dot">.</span>
             </div>
             <h1>Оценка кандидатов</h1>
-            <p>Единое пространство для решений о людях.</p>
+            <p>Войдите в рабочее пространство HR и менеджеров.</p>
             <form @submit.prevent="submit">
                 <Message v-if="error" severity="error">{{ error }}</Message
                 ><label class="field"
                     >Логин<InputText
                         v-model="login"
                         autocomplete="username"
+                        :disabled="loading"
                         autofocus
                         required
                 /></label>
@@ -50,6 +51,7 @@ async function submit() {
                     ><Password
                         v-model="password"
                         input-id="password"
+                        :disabled="loading"
                         :feedback="false"
                         toggle-mask
                         autocomplete="current-password"
@@ -66,9 +68,9 @@ async function submit() {
                 />
             </form>
             <small class="login-note"
-                >Результаты интервью. Потенциал. Взвешенные решения.</small
+                >Используйте учётную запись, выданную вашей компанией.</small
             >
         </div>
-        <div class="login-footer">HRSquare · 9-Box assessment</div>
+        <div class="login-footer">HRSquare · Оценка кандидатов</div>
     </main>
 </template>

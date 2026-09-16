@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import BorderBeam from "./ui/BorderBeam.vue";
+import { nineBoxMetadata } from "../config/nineBox";
 import type { Level, Cell } from "../types";
 const props = withDefaults(
     defineProps<{
@@ -12,60 +14,6 @@ const props = withDefaults(
 );
 const emit = defineEmits<{ select: [cell: Cell] }>();
 const cells: Cell[] = ["M1", "S1", "B1", "M2", "S2", "B2", "M3", "S3", "B3"];
-const nineBoxMetadata: Record<
-    Cell,
-    { title: string; description: string; recommendation: string | null }
-> = {
-    M1: {
-        title: "НЕРЕАЛИЗОВАННЫЙ ПОТЕНЦИАЛ",
-        description:
-            "Низкая доказанная результативность при сильных признаках Potential.",
-        recommendation: "Рассмотреть другую роль / уровень",
-    },
-    S1: {
-        title: "ТАЛАНТ / БУДУЩИЙ ЛИДЕР",
-        description:
-            "Результативность подтверждена на хорошем уровне + высокий Potential.",
-        recommendation: "Инвестируем в рост — результат уже на хорошем уровне",
-    },
-    B1: {
-        title: "ТАЛАНТ / ЗВЕЗДА",
-        description: "Высокая доказанная результативность + высокий Potential.",
-        recommendation: "Приоритетный кандидат",
-    },
-    M2: {
-        title: "НЕДОСТАТОЧНАЯ РЕЗУЛЬТАТИВНОСТЬ",
-        description: "Результат недостаточно подтверждён.",
-        recommendation: null,
-    },
-    S2: {
-        title: "ПЕРСПЕКТИВНЫЙ КАНДИДАТ",
-        description: "Результативность подтверждена + Potential развития есть.",
-        recommendation: "Решение требует оценки риска",
-    },
-    B2: {
-        title: "СИЛЬНЫЙ ПРОФЕССИОНАЛ",
-        description:
-            "Высокая результативность + достаточный Potential для текущей / следующей сложности.",
-        recommendation: "Сильный кандидат на текущую позицию",
-    },
-    M3: {
-        title: "НЕ ПОДТВЕРЖДЁН",
-        description: "Низкая результативность + низкий Potential.",
-        recommendation: null,
-    },
-    S3: {
-        title: "ОГРАНИЧЕННЫЙ ПРОГНОЗ",
-        description: "Средняя результативность + низкий Potential.",
-        recommendation: null,
-    },
-    B3: {
-        title: "СИЛЬНЫЙ ИСПОЛНИТЕЛЬ ТЕКУЩЕГО УРОВНЯ",
-        description:
-            "Высокая результативность + низкий Potential. Редкое исключение (~5%).",
-        recommendation: null,
-    },
-};
 const potentialLevels = ["HIGH", "MEDIUM", "LOW"];
 const resultLevels = ["LOW", "MEDIUM", "HIGH"];
 const selected = computed(() => props.selectedCell);
@@ -107,23 +55,13 @@ const selected = computed(() => props.selectedCell);
                         ]"
                         @click="emit('select', cell)"
                     >
-                        <svg
+                        <BorderBeam
                             v-if="selected === cell"
-                            class="matrix-selection-accent"
-                            viewBox="0 0 100 100"
-                            preserveAspectRatio="none"
-                            aria-hidden="true"
-                            focusable="false"
-                        >
-                            <rect
-                                x="1"
-                                y="1"
-                                width="98"
-                                height="98"
-                                rx="2"
-                                pathLength="100"
-                            />
-                        </svg>
+                            :size="220"
+                            :border-width="3"
+                            :offset="5"
+                            :duration="4"
+                        />
                         <div class="matrix-cell-header">
                             <strong class="matrix-code">{{ cell }}</strong>
                             <span
@@ -181,14 +119,14 @@ const selected = computed(() => props.selectedCell);
 }
 .matrix-wrap {
     display: block;
-    max-width: 100% !important;
+    max-width: 100%;
     min-width: 0;
     width: 100%;
     container-type: inline-size;
 }
 .matrix-scroll {
     overflow-x: auto;
-    padding: 5px;
+    padding: 9px;
 }
 .matrix-frame {
     min-width: 640px;
@@ -199,6 +137,7 @@ const selected = computed(() => props.selectedCell);
     row-gap: 12px;
 }
 .result-axis {
+    text-align: center;
     grid-column: 3;
     margin: 0;
     font-size: 14px;
@@ -207,14 +146,19 @@ const selected = computed(() => props.selectedCell);
     color: var(--muted);
 }
 .axis-levels {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    text-align: center;
     grid-column: 3;
     margin: 0;
     font-size: 12px;
     font-weight: 600;
-    gap: 7px;
+    gap: 12px;
     color: var(--muted);
 }
 .potential-axis {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
     grid-column: 1;
     grid-row: 3;
     align-self: center;
@@ -229,7 +173,7 @@ const selected = computed(() => props.selectedCell);
     grid-row: 3;
     display: grid;
     grid-template-rows: repeat(3, 1fr);
-    gap: 7px;
+    gap: 12px;
     align-items: center;
     text-align: right;
     font-size: 11px;
@@ -237,12 +181,23 @@ const selected = computed(() => props.selectedCell);
     color: var(--muted);
 }
 .matrix {
+    display: grid;
+    gap: 12px;
     grid-column: 3;
     grid-row: 3;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-auto-rows: 1fr;
 }
 .matrix-cell {
+    display: flex;
+    position: relative;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    opacity: 1;
+    cursor: default;
+    transition:
+        box-shadow 150ms,
+        border-color 150ms;
     aspect-ratio: auto;
     min-width: 0;
     min-height: 260px;
@@ -268,24 +223,22 @@ const selected = computed(() => props.selectedCell);
     align-items: center;
     justify-content: space-between;
     gap: 6px;
-    min-height: 42px;
+    min-height: 52px;
     width: 100%;
 }
 .matrix-selected-label {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 9px;
-    border-radius: 999px;
-    background: var(--nine-box-on-blue);
-    color: var(--nine-box-foreground);
-    font-size: 10px;
+    justify-self: end;
+    color: var(--nine-box-on-blue);
+    font-size: 12px;
     font-weight: 600;
     line-height: 1.3;
 }
 .matrix-selected-label .pi {
     position: static;
-    font-size: 10px;
+    font-size: 14px;
     color: inherit;
 }
 .matrix-title {
@@ -353,50 +306,29 @@ const selected = computed(() => props.selectedCell);
     border: 2px solid var(--nine-box-foreground);
     padding: 15px;
     box-shadow:
-        inset 0 0 0 1px rgb(255 255 255 / 55%),
-        0 0 0 1px var(--nine-box-on-blue),
-        0 3px 10px rgb(20 43 122 / 16%);
+        inset 0 0 0 2px var(--nine-box-on-blue),
+        0 0 0 2px var(--nine-box-on-blue),
+        0 0 0 5px var(--nine-box-foreground),
+        0 6px 16px rgb(20 43 122 / 18%);
     isolation: isolate;
+    z-index: 1;
 }
-.matrix-selection-accent {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
+.matrix-cell.selected .matrix-cell-header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    background: var(--nine-box-foreground);
+    color: var(--nine-box-on-blue);
 }
-.matrix-selection-accent rect {
-    fill: none;
-    stroke: var(--nine-box-on-blue);
-    stroke-width: 3;
-    stroke-linecap: round;
-    stroke-dasharray: 28 22;
-    vector-effect: non-scaling-stroke;
-    opacity: 1;
-    filter: drop-shadow(0 0 2px rgb(255 255 255 / 75%));
-    animation: selected-result-trace 2.4s linear infinite;
+.matrix-cell.selected .matrix-code {
+    font-size: 22px;
+    letter-spacing: -0.5px;
 }
 .matrix-cell.selected .matrix-selected-label {
-    box-shadow: 0 1px 3px rgb(20 43 122 / 10%);
-    animation:
-        selected-result-reveal 400ms ease-out both,
-        selected-result-label-glow 2.4s ease-in-out 400ms infinite;
-}
-@keyframes selected-result-label-glow {
-    0%,
-    100% {
-        box-shadow: 0 1px 3px rgb(20 43 122 / 10%);
-    }
-    50% {
-        box-shadow:
-            0 0 0 3px rgb(255 255 255 / 35%),
-            0 2px 10px rgb(20 43 122 / 24%);
-    }
-}
-@keyframes selected-result-trace {
-    to {
-        stroke-dashoffset: -100;
-    }
+    animation: selected-result-reveal 400ms ease-out both;
 }
 @keyframes selected-result-reveal {
     from {
@@ -409,13 +341,12 @@ const selected = computed(() => props.selectedCell);
     }
 }
 @media (prefers-reduced-motion: reduce) {
-    .matrix-selection-accent {
-        display: none;
-    }
-    .matrix-selection-accent rect,
     .matrix-cell.selected .matrix-selected-label {
         animation: none;
     }
+}
+.matrix-cell:enabled {
+    cursor: pointer;
 }
 .matrix-cell:enabled:hover {
     filter: brightness(1.04);

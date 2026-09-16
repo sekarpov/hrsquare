@@ -11,6 +11,10 @@ import Column from "primevue/column";
 import Tag from "primevue/tag";
 import Paginator from "primevue/paginator";
 import Message from "primevue/message";
+import Skeleton from "primevue/skeleton";
+import PageHeader from "../components/PageHeader.vue";
+import EmptyState from "../components/EmptyState.vue";
+import RequestState from "../components/RequestState.vue";
 import { usersApi } from "../api/users";
 import { fieldErrors, errorMessage } from "../api/http";
 import { useToast } from "primevue/usetoast";
@@ -26,6 +30,7 @@ const users = ref<User[]>([]),
     editing = ref<User | null>(null),
     errors = ref<FieldErrors>({}),
     failure = ref(""),
+    formFailure = ref(""),
     saving = ref(false),
     toast = useToast(),
     confirm = useConfirm();
@@ -41,20 +46,24 @@ const roles = [
     { label: "Менеджер", value: "MANAGER" },
 ];
 let timer: ReturnType<typeof setTimeout>;
+let loadVersion = 0;
 async function load() {
+    const version = ++loadVersion;
     loading.value = true;
+    failure.value = "";
     try {
         const data = await usersApi.list({
             search: search.value,
             role: role.value,
             page: page.value,
         });
+        if (version !== loadVersion) return;
         users.value = data.data;
         total.value = data.meta.total;
     } catch (e) {
-        failure.value = errorMessage(e);
+        if (version === loadVersion) failure.value = errorMessage(e);
     } finally {
-        loading.value = false;
+        if (version === loadVersion) loading.value = false;
     }
 }
 onMounted(load);
@@ -65,7 +74,10 @@ watch([search, role], () => {
         void load();
     }, 300);
 });
-onUnmounted(() => clearTimeout(timer));
+onUnmounted(() => {
+    clearTimeout(timer);
+    loadVersion++;
+});
 function edit(user: User | null) {
     editing.value = user;
     Object.assign(
@@ -82,11 +94,13 @@ function edit(user: User | null) {
     );
     errors.value = {};
     failure.value = "";
+    formFailure.value = "";
     dialog.value = true;
 }
 async function save() {
     saving.value = true;
     errors.value = {};
+    formFailure.value = "";
     try {
         await usersApi.save(form, editing.value?.id);
         dialog.value = false;
@@ -98,8 +112,7 @@ async function save() {
         });
     } catch (e) {
         errors.value = fieldErrors(e);
-        failure.value =
-            Object.values(errors.value).flat().join(" ") || errorMessage(e);
+        formFailure.value = errorMessage(e);
     } finally {
         saving.value = false;
     }
@@ -108,8 +121,10 @@ function remove(user: User) {
     confirm.require({
         header: "Удалить пользователя?",
         message: `${user.fullName}. Если есть связи с кандидатами, вместо удаления отключите учётную запись.`,
+        acceptProps: { severity: "danger" },
         acceptLabel: "Удалить",
         rejectLabel: "Отмена",
+        rejectProps: { severity: "secondary" },
         accept: async () => {
             try {
                 await usersApi.remove(user.id);
@@ -129,20 +144,15 @@ function remove(user: User) {
 }
 </script>
 <template>
-    <div class="page-header">
-        <div>
-            <div class="eyebrow">КОМАНДА</div>
-            <h1>
-                Пользователи <span class="count">{{ total }}</span>
-            </h1>
-            <p>Управление доступом рекрутеров и менеджеров.</p>
-        </div>
-        <Button
+    <PageHeader
+        title="Пользователи"
+        :count="total"
+        description="Учётные записи и доступ к рабочему пространству."
+        ><Button
             label="Добавить пользователя"
             icon="pi pi-plus"
             @click="edit(null)"
-        />
-    </div>
+    /></PageHeader>
     <div class="panel filters filter-row">
         <InputText
             v-model="search"
@@ -154,20 +164,42 @@ function remove(user: User) {
             option-label="label"
             option-value="value"
             placeholder="Роль"
+            aria-label="Роль пользователя"
             show-clear
         />
     </div>
-    <Message v-if="failure && !dialog" severity="error">{{ failure }}</Message>
-    <div class="panel table-panel">
+    <RequestState v-if="failure" :message="failure" @retry="load" />
+    <div v-else class="panel table-panel">
+        <div
+            v-if="loading"
+            class="skeleton-list"
+            role="status"
+            aria-label="Загрузка пользователей"
+        >
+            <div v-for="n in 5" :key="n" class="skeleton-row">
+                <Skeleton width="30%" height="24px" /><Skeleton
+                    width="20%"
+                /><Skeleton width="15%" />
+            </div>
+        </div>
         <DataTable
+            v-else
             :value="users"
             :loading="loading"
             scrollable
             :table-style="{ minWidth: '700px' }"
             ><template #empty
-                ><div class="empty-state">
-                    Пользователи не найдены
-                </div></template
+                ><EmptyState
+                    title="Пользователи не найдены"
+                    description="Попробуйте изменить поисковый запрос или роль."
+                    icon="pi pi-users"
+                    ><Button
+                        label="Сбросить фильтры"
+                        severity="secondary"
+                        @click="
+                            search = '';
+                            role = null;
+                        " /></EmptyState></template
             ><Column field="fullName" header="ФИО" /><Column
                 field="login"
                 header="Логин" /><Column header="Роль"
@@ -193,7 +225,7 @@ function remove(user: User) {
                         @click="edit(data)" /><Button
                         icon="pi pi-trash"
                         text
-                        severity="secondary"
+                        severity="danger"
                         aria-label="Удалить пользователя"
                         @click="remove(data)" /></template></Column></DataTable
         ><Paginator
@@ -212,17 +244,28 @@ function remove(user: User) {
         :header="editing ? 'Редактировать пользователя' : 'Новый пользователь'"
         :style="{ width: '540px' }"
         :breakpoints="{ '600px': '95vw' }"
-        ><form @submit.prevent="save" class="user-form">
-            <Message v-if="failure" severity="error">{{ failure }}</Message
+        :closable="!saving"
+        :close-on-escape="!saving"
+        ><p class="dialog-description">
+            Роль определяет доступ к кандидатам и управлению пользователями.
+        </p>
+        <form id="user-form" @submit.prevent="save" class="user-form">
+            <Message v-if="formFailure" severity="error">{{
+                formFailure
+            }}</Message
             ><label class="field"
-                >ФИО<InputText
+                >ФИО *<InputText
+                    required
+                    :disabled="saving"
                     v-model="form.fullName"
                     :invalid="!!errors.fullName"
                 /><small class="error" v-for="e in errors.fullName">{{
                     e
                 }}</small></label
             ><label class="field"
-                >Логин<InputText
+                >Логин *<InputText
+                    required
+                    :disabled="saving"
                     v-model="form.login"
                     autocomplete="off"
                     :invalid="!!errors.login"
@@ -234,39 +277,55 @@ function remove(user: User) {
                 <label for="user-password">{{
                     editing
                         ? "Новый пароль (оставьте пустым, чтобы сохранить)"
-                        : "Пароль"
+                        : "Пароль *"
                 }}</label
                 ><Password
                     v-model="form.password"
                     input-id="user-password"
                     toggle-mask
                     :feedback="false"
+                    :disabled="saving"
+                    :required="!editing"
                     autocomplete="new-password"
                     :invalid="!!errors.password"
                 /><small class="error" v-for="e in errors.password">{{
                     e
                 }}</small>
             </div>
-            <label class="field"
-                >Роль<Select
+            <div class="field">
+                <label for="user-role">Роль *</label
+                ><Select
+                    input-id="user-role"
+                    :disabled="saving"
                     v-model="form.role"
                     :options="roles"
                     option-label="label"
                     option-value="value"
-                /><small class="error" v-for="e in errors.role">{{
-                    e
-                }}</small></label
-            ><label class="toggle-field"
-                ><ToggleSwitch v-model="form.isActive" />Активная учётная
-                запись</label
+                /><small class="error" v-for="e in errors.role">{{ e }}</small>
+            </div>
+            <label class="toggle-field" for="user-active"
+                ><ToggleSwitch
+                    input-id="user-active"
+                    v-model="form.isActive"
+                    :disabled="saving"
+                />Активная учётная запись</label
             ><small class="error" v-for="e in errors.isActive">{{ e }}</small>
+        </form>
+        <template #footer>
             <div class="form-actions">
                 <Button
                     label="Отмена"
                     severity="secondary"
                     text
+                    :disabled="saving"
                     @click="dialog = false"
-                /><Button label="Сохранить" type="submit" :loading="saving" />
-            </div></form
-    ></Dialog>
+                /><Button
+                    label="Сохранить"
+                    type="submit"
+                    form="user-form"
+                    :loading="saving"
+                />
+            </div>
+        </template>
+    </Dialog>
 </template>

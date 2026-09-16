@@ -1,25 +1,7 @@
 import { createApp } from "vue";
 import { createPinia } from "pinia";
 import PrimeVue from "primevue/config";
-import Aura from "@primeuix/themes/aura";
-import { definePreset } from "@primeuix/themes";
-const HRSquareTheme = definePreset(Aura, {
-    semantic: {
-        primary: {
-            50: "{indigo.50}",
-            100: "{indigo.100}",
-            200: "{indigo.200}",
-            300: "{indigo.300}",
-            400: "{indigo.400}",
-            500: "#4765dc",
-            600: "{indigo.600}",
-            700: "{indigo.700}",
-            800: "{indigo.800}",
-            900: "{indigo.900}",
-            950: "{indigo.950}",
-        },
-    },
-});
+import { HRSquareTheme } from "./config/theme";
 import ToastService from "primevue/toastservice";
 import ConfirmationService from "primevue/confirmationservice";
 import Tooltip from "primevue/tooltip";
@@ -39,6 +21,11 @@ createApp(App)
             emptySearchMessage: "Ничего не найдено",
             accept: "Да",
             reject: "Отмена",
+            choose: "Выбрать",
+            searchMessage: "Найдено: {0}",
+            selectionMessage: "Выбрано: {0}",
+            emptySelectionMessage: "Ничего не выбрано",
+            emptyFilterMessage: "Ничего не найдено",
         },
     })
     .use(ToastService)

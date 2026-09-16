@@ -1,8 +1,24 @@
+<script setup lang="ts">
+import { useRoute } from "vue-router";
+import EmptyState from "../components/EmptyState.vue";
+const route = useRoute();
+</script>
 <template>
-    <div class="empty-state">
-        <i class="pi pi-compass" />
-        <h1>Страница не найдена</h1>
-        <p>Проверьте адрес или вернитесь к списку кандидатов.</p>
-        <RouterLink to="/candidates">К кандидатам →</RouterLink>
-    </div>
+    <section class="panel">
+        <EmptyState
+            :title="
+                route.meta.forbidden ? 'Нет доступа' : 'Страница не найдена'
+            "
+            :description="
+                route.meta.forbidden
+                    ? 'У вас нет прав для просмотра этой страницы.'
+                    : 'Возможно, ссылка устарела или страница была удалена.'
+            "
+            :icon="route.meta.forbidden ? 'pi pi-lock' : 'pi pi-compass'"
+        >
+            <RouterLink to="/candidates" class="text-link"
+                >К кандидатам →</RouterLink
+            >
+        </EmptyState>
+    </section>
 </template>

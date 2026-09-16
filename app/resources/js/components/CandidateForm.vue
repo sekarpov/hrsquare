@@ -8,6 +8,7 @@ import Message from "primevue/message";
 import UserMultiSelect from "./UserMultiSelect.vue";
 import { candidatesApi } from "../api/candidates";
 import { fieldErrors, errorMessage } from "../api/http";
+import { candidateStatuses } from "../config/presentation";
 import { useAuth } from "../stores/auth";
 import { useToast } from "primevue/usetoast";
 import type { Candidate, CandidateInput, FieldErrors } from "../types";
@@ -41,11 +42,7 @@ const fields = [
     { key: "division", label: "Дивизион" },
     { key: "project", label: "Проект" },
 ] as const;
-const statuses = [
-    { label: "Активный", value: "ACTIVE" },
-    { label: "Нанят", value: "HIRED" },
-    { label: "Отклонён", value: "REJECTED" },
-];
+
 watch(
     () => props.visible,
     (visible) => {
@@ -70,13 +67,16 @@ watch(
 async function save() {
     saving.value = true;
     errors.value = {};
+    message.value = "";
     try {
         const candidate = await candidatesApi.save(form, props.candidate?.id);
         emit("saved", candidate);
         emit("update:visible", false);
         toast.add({
             severity: "success",
-            summary: "Кандидат сохранён",
+            summary: props.candidate
+                ? "Изменения сохранены"
+                : "Кандидат создан",
             life: 2500,
         });
     } catch (error) {
@@ -94,69 +94,149 @@ async function save() {
         :header="candidate ? 'Редактировать кандидата' : 'Новый кандидат'"
         :style="{ width: '720px' }"
         :breakpoints="{ '768px': '95vw' }"
+        :closable="!saving"
+        :close-on-escape="!saving"
         @update:visible="emit('update:visible', $event)"
-        ><form @submit.prevent="save" class="form-grid">
-            <Message v-if="message" severity="error" class="span-2">{{
-                message
-            }}</Message
-            ><label v-for="field in fields" :key="field.key" class="field"
-                >{{ field.label
-                }}<InputText
-                    v-model="form[field.key]"
-                    :invalid="!!errors[field.key]"
-                    :autofocus="field.key === 'fullName'"
-                /><small class="error" v-for="error in errors[field.key]">{{
-                    error
-                }}</small></label
-            ><label class="field"
-                >Статус<Select
-                    v-model="form.status"
-                    :options="statuses"
-                    option-label="label"
-                    option-value="value"
-            /></label>
-            <div />
-            <label class="field span-2"
-                >Менеджеры *<UserMultiSelect
-                    v-model="form.hiringManagerIds"
-                    role="managers"
-                    :selected-users="
-                        candidate?.hiringManagers ??
-                        (auth.user?.role === 'MANAGER' ? [auth.user] : [])
-                    "
-                    :invalid="
-                        Object.keys(errors).some((k) =>
-                            k.startsWith('hiringManagerIds'),
-                        )
-                    "
-                /><small class="error" v-for="(messages, key) in errors"
-                    ><template v-if="key.startsWith('hiringManagerIds')">{{
-                        messages.join(" ")
-                    }}</template></small
-                ></label
-            ><label class="field span-2"
-                >Рекрутеры<UserMultiSelect
-                    v-model="form.recruiterIds"
-                    role="recruiters"
-                    :selected-users="candidate?.recruiters"
-                    :invalid="
-                        Object.keys(errors).some((k) =>
-                            k.startsWith('recruiterIds'),
-                        )
-                    "
-                /><small class="error" v-for="(messages, key) in errors"
-                    ><template v-if="key.startsWith('recruiterIds')">{{
-                        messages.join(" ")
-                    }}</template></small
-                ></label
+    >
+        <p class="dialog-description">
+            Основные данные и участники найма. Поля со звёздочкой обязательны.
+        </p>
+        <form id="candidate-form" @submit.prevent="save">
+            <Message v-if="message" severity="error">{{ message }}</Message>
+            <fieldset
+                v-for="(section, index) in [
+                    {
+                        title: 'Основная информация',
+                        fields: fields.slice(0, 3),
+                    },
+                    { title: 'Организация', fields: fields.slice(3) },
+                ]"
+                :key="section.title"
+                class="form-section"
             >
-            <div class="form-actions span-2">
+                <legend>{{ section.title }}</legend>
+                <div class="form-grid">
+                    <label
+                        v-for="field in section.fields"
+                        :key="field.key"
+                        class="field"
+                        :class="{ 'span-2': field.key === 'fullName' }"
+                        :for="`candidate-${field.key}`"
+                        >{{ field.label }}
+                        <InputText
+                            :id="`candidate-${field.key}`"
+                            v-model="form[field.key]"
+                            :invalid="!!errors[field.key]"
+                            :required="
+                                field.key === 'fullName' ||
+                                field.key === 'position'
+                            "
+                            :autofocus="field.key === 'fullName'"
+                            :disabled="saving"
+                            :aria-describedby="
+                                errors[field.key]
+                                    ? `candidate-${field.key}-error`
+                                    : undefined
+                            "
+                        />
+                        <small
+                            v-if="errors[field.key]"
+                            :id="`candidate-${field.key}-error`"
+                            class="error"
+                            >{{ errors[field.key].join(" ") }}</small
+                        >
+                    </label>
+                </div>
+            </fieldset>
+            <fieldset class="form-section">
+                <legend>Участники найма</legend>
+                <div class="form-grid">
+                    <div class="field">
+                        <label for="candidate-managers">Менеджеры *</label
+                        ><UserMultiSelect
+                            input-id="candidate-managers"
+                            v-model="form.hiringManagerIds"
+                            role="managers"
+                            :selected-users="
+                                candidate?.hiringManagers ??
+                                (auth.user?.role === 'MANAGER'
+                                    ? [auth.user]
+                                    : [])
+                            "
+                            :disabled="saving"
+                            :invalid="
+                                Object.keys(errors).some((k) =>
+                                    k.startsWith('hiringManagerIds'),
+                                )
+                            "
+                        /><small
+                            >Один или несколько нанимающих менеджеров.</small
+                        ><small
+                            v-for="(messages, key) in errors"
+                            :key="key"
+                            v-show="key.startsWith('hiringManagerIds')"
+                            class="error"
+                            >{{ messages.join(" ") }}</small
+                        >
+                    </div>
+                    <div class="field">
+                        <label for="candidate-recruiters">Рекрутеры</label
+                        ><UserMultiSelect
+                            input-id="candidate-recruiters"
+                            v-model="form.recruiterIds"
+                            role="recruiters"
+                            :selected-users="candidate?.recruiters"
+                            :disabled="saving"
+                            :invalid="
+                                Object.keys(errors).some((k) =>
+                                    k.startsWith('recruiterIds'),
+                                )
+                            "
+                        /><small>Сотрудники, сопровождающие кандидата.</small
+                        ><small
+                            v-for="(messages, key) in errors"
+                            :key="key"
+                            v-show="key.startsWith('recruiterIds')"
+                            class="error"
+                            >{{ messages.join(" ") }}</small
+                        >
+                    </div>
+                </div>
+            </fieldset>
+            <fieldset class="form-section">
+                <legend>Статус</legend>
+                <div class="field">
+                    <label for="candidate-status">Статус кандидата</label
+                    ><Select
+                        input-id="candidate-status"
+                        v-model="form.status"
+                        :options="candidateStatuses"
+                        option-label="label"
+                        option-value="value"
+                        :disabled="saving"
+                        :invalid="!!errors.status"
+                    /><small v-if="errors.status" class="error">{{
+                        errors.status.join(" ")
+                    }}</small>
+                </div>
+            </fieldset>
+        </form>
+        <template #footer>
+            <div class="form-actions">
                 <Button
                     label="Отмена"
                     severity="secondary"
-                    text
+                    :disabled="saving"
                     @click="emit('update:visible', false)"
-                /><Button type="submit" label="Сохранить" :loading="saving" />
-            </div></form
-    ></Dialog>
+                /><Button
+                    type="submit"
+                    form="candidate-form"
+                    :label="
+                        candidate ? 'Сохранить изменения' : 'Добавить кандидата'
+                    "
+                    :loading="saving"
+                />
+            </div>
+        </template>
+    </Dialog>
 </template>

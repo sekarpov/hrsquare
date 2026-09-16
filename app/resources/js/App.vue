@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from "vue";
+import { onMounted, onUnmounted, ref, defineAsyncComponent } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAuth } from "./stores/auth";
 import { useToast } from "primevue/usetoast";
 import Toast from "primevue/toast";
 import ConfirmDialog from "primevue/confirmdialog";
+const Drawer = defineAsyncComponent(() => import("primevue/drawer"));
 import Button from "primevue/button";
+import WorkspaceNavigation from "./components/WorkspaceNavigation.vue";
 const route = useRoute(),
     router = useRouter(),
     auth = useAuth(),
@@ -14,77 +16,84 @@ const route = useRoute(),
 async function logout() {
     try {
         await auth.logout();
+        menu.value = false;
         await router.push("/login");
-    } catch {}
+    } catch {
+        toast.add({
+            severity: "error",
+            summary: "Не удалось выйти",
+            detail: "Проверьте соединение и попробуйте ещё раз.",
+            life: 5000,
+        });
+    }
 }
 function apiError(event: Event) {
     const { status, message } = (event as CustomEvent).detail;
     if (status === 401) {
         const wasAuthenticated = !!auth.user;
         auth.user = null;
-        if (wasAuthenticated && route.path != "/login")
+        if (wasAuthenticated && route.path !== "/login")
             void router.push("/login");
-        return;
+    } else if (status === 419 || status === 429) {
+        toast.add({
+            severity: "warn",
+            summary: "Запрос не выполнен",
+            detail: message,
+            life: 5000,
+        });
     }
-    toast.add({
-        severity: status === 419 ? "warn" : "error",
-        summary: "Не удалось выполнить запрос",
-        detail: message,
-        life: 5000,
-    });
 }
 onMounted(() => window.addEventListener("api:error", apiError));
 onUnmounted(() => window.removeEventListener("api:error", apiError));
 </script>
 <template>
-    <Toast /><ConfirmDialog />
+    <Toast /><ConfirmDialog :style="{ width: '480px' }" />
     <div v-if="route.meta.public" class="public-layout"><RouterView /></div>
     <div v-else class="workspace">
-        <aside class="sidebar" :class="{ expanded: menu }">
-            <RouterLink to="/candidates" class="brand"
-                >HR<span>Square</span
-                ><span class="brand-dot">.</span></RouterLink
-            ><small class="workspace-label">ОЦЕНКА КАНДИДАТОВ</small>
-            <nav>
-                <RouterLink to="/candidates" @click="menu = false"
-                    ><i class="pi pi-users" />Кандидаты</RouterLink
-                ><RouterLink
-                    v-if="auth.isRecruiter"
-                    to="/users"
-                    @click="menu = false"
-                    ><i class="pi pi-user-edit" />Пользователи</RouterLink
-                >
-            </nav>
-            <div class="sidebar-bottom">
-                <div class="user-avatar">
-                    {{ auth.user?.fullName.charAt(0) }}
-                </div>
-                <div>
-                    <strong>{{ auth.user?.fullName }}</strong
-                    ><small>{{
-                        auth.isRecruiter ? "Рекрутер" : "Менеджер"
-                    }}</small>
-                </div>
-                <Button
-                    icon="pi pi-sign-out"
-                    text
-                    rounded
-                    aria-label="Выйти"
-                    v-tooltip="'Выйти'"
-                    @click="logout"
-                />
-            </div>
-        </aside>
-        <main class="content">
+        <a class="skip-link" href="#main-content">Перейти к содержимому</a>
+        <aside class="sidebar"><WorkspaceNavigation @logout="logout" /></aside>
+        <Drawer
+            v-if="menu"
+            v-model:visible="menu"
+            header="Навигация"
+            :pt="{ content: { class: 'drawer-navigation' } }"
+        >
+            <WorkspaceNavigation @navigate="menu = false" @logout="logout" />
+        </Drawer>
+        <main id="main-content" class="content" tabindex="-1">
             <div class="mobile-bar">
                 <Button
                     icon="pi pi-bars"
                     text
                     aria-label="Открыть меню"
-                    @click="menu = !menu"
+                    :aria-expanded="menu"
+                    @click="menu = true"
                 /><b>HRSquare</b>
             </div>
-            <RouterView :key="route.fullPath" />
+            <div class="page-content"><RouterView :key="route.path" /></div>
         </main>
     </div>
 </template>
+<style>
+.drawer-navigation {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+}
+.drawer-navigation nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+.drawer-navigation nav a {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+}
+.drawer-navigation nav a.active {
+    background: var(--primary-soft);
+    color: var(--primary);
+}
+</style>

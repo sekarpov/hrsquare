@@ -2,6 +2,10 @@ import { createRouter, createWebHistory } from "vue-router";
 import { useAuth } from "../stores/auth";
 export const router = createRouter({
     history: createWebHistory(),
+    scrollBehavior(to, from, saved) {
+        if (to.hash) return { el: to.hash, top: 24 };
+        return saved ?? { top: 0 };
+    },
     routes: [
         {
             path: "/login",
@@ -27,6 +31,11 @@ export const router = createRouter({
             meta: { recruiter: true },
         },
         {
+            path: "/forbidden",
+            component: () => import("../views/NotFoundView.vue"),
+            meta: { forbidden: true },
+        },
+        {
             path: "/:pathMatch(.*)*",
             component: () => import("../views/NotFoundView.vue"),
         },
@@ -37,5 +46,5 @@ router.beforeEach(async (to) => {
     await auth.hydrate();
     if (!to.meta.public && !auth.user) return "/login";
     if (to.path === "/login" && auth.user) return "/candidates";
-    if (to.meta.recruiter && !auth.isRecruiter) return "/candidates";
+    if (to.meta.recruiter && !auth.isRecruiter) return "/forbidden";
 });

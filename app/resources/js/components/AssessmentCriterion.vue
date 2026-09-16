@@ -28,13 +28,13 @@ const scores: Score[] = [1, 2, 3, 4];
 <template>
     <article class="criterion-card tw:mb-6">
         <Card
-            class="tw:rounded-2xl tw:border tw:border-solid tw:border-slate-200 tw:shadow-sm"
+            class="tw:rounded-xl tw:border tw:border-solid tw:border-slate-200 tw:shadow-sm"
             :pt="{ body: { class: 'tw:p-5 tw:sm:p-6' } }"
         >
             <template #title>
                 <div class="tw:flex tw:items-start tw:gap-3">
                     <span
-                        class="tw:flex tw:size-9 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-xl tw:bg-indigo-50 tw:text-sm tw:font-bold tw:text-indigo-600"
+                        class="tw:flex tw:size-9 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-xl tw:bg-[var(--primary-soft)] tw:text-sm tw:font-bold tw:text-[var(--primary)]"
                         >{{ number }}</span
                     >
                     <h3
@@ -59,7 +59,7 @@ const scores: Score[] = [1, 2, 3, 4];
                             {{ criterion.question }}
                         </p>
                     </div>
-                    <Accordion :value="['clarification']" multiple>
+                    <Accordion :value="[]" multiple>
                         <AccordionPanel value="clarification">
                             <AccordionHeader
                                 ><span
@@ -84,13 +84,16 @@ const scores: Score[] = [1, 2, 3, 4];
                     <Message
                         severity="success"
                         :closable="false"
-                        class="criterion-strong tw:rounded-xl"
-                        :pt="{ content: { class: 'tw:items-start tw:p-4' } }"
+                        class="criterion-strong tw:rounded-md"
+                        icon="pi pi-check-circle"
+                        role="note"
+                        aria-live="off"
+                        :pt="{ content: { class: 'tw:items-start tw:p-3' } }"
                     >
                         <div>
                             <small
                                 class="tw:text-xs tw:font-semibold tw:tracking-wide tw:text-emerald-700"
-                                >ФОРМАТ ОТВЕТА</small
+                                >СИЛЬНЫЙ ОТВЕТ</small
                             >
                             <p
                                 class="tw:mt-2 tw:text-sm tw:font-normal tw:leading-relaxed tw:text-slate-700"
@@ -112,7 +115,7 @@ const scores: Score[] = [1, 2, 3, 4];
                                 emit('update:evidence', $event ?? '')
                             "
                             :disabled="!editable"
-                            rows="4"
+                            rows="3"
                             auto-resize
                             :placeholder="criterion.placeholder"
                             :invalid="!!evidenceErrors?.length"
@@ -138,13 +141,13 @@ const scores: Score[] = [1, 2, 3, 4];
                                 v-for="value in scores"
                                 :key="value"
                                 :for="`${criterionKey}-score-${value}`"
-                                class="tw:flex tw:items-start tw:gap-3 tw:rounded-xl tw:border tw:border-solid tw:p-4 tw:transition-colors tw:focus-within:ring-2 tw:focus-within:ring-indigo-300"
+                                class="tw:flex tw:items-start tw:gap-3 tw:rounded-xl tw:border tw:border-solid tw:p-4 tw:transition-colors tw:focus-within:ring-2 tw:focus-within:ring-[var(--focus-ring)]"
                                 :class="[
                                     score === value
-                                        ? 'tw:border-indigo-500 tw:bg-indigo-50'
+                                        ? 'tw:border-[var(--primary)] tw:bg-[var(--primary-soft)]'
                                         : 'tw:border-slate-200 tw:bg-white',
                                     editable
-                                        ? 'tw:cursor-pointer tw:hover:border-indigo-400'
+                                        ? 'tw:cursor-pointer tw:hover:border-[var(--primary)]'
                                         : 'tw:cursor-default',
                                 ]"
                             >

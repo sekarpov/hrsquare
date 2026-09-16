@@ -1,51 +1,56 @@
 <script setup lang="ts">
 import NineBoxMatrix from "./NineBoxMatrix.vue";
+import { levelLabels } from "../config/presentation";
+import { nineBoxMetadata } from "../config/nineBox";
 import type { Assessment } from "../types";
 defineProps<{ assessment: Assessment | null; compact?: boolean }>();
-const levelLabel = (level: string | null | undefined) =>
-    ({ LOW: "Низкий", MEDIUM: "Средний", HIGH: "Высокий" })[level ?? ""] ??
-    "Нет оценки";
 </script>
 <template>
-    <div class="summary-scores tw:grid tw:grid-cols-3 tw:gap-3">
-        <div class="tw:rounded-xl tw:bg-slate-50 tw:p-3 tw:text-center">
-            <small
-                class="tw:text-[10px] tw:font-semibold tw:tracking-wide tw:text-slate-500"
-                >RESULT</small
+    <div class="summary-scores">
+        <div>
+            <small>RESULT</small
             ><strong
-                class="tw:text-2xl tw:font-semibold tw:tabular-nums tw:text-slate-900"
-                >{{ assessment?.resultAverage?.toFixed(2) ?? "—" }}</strong
-            ><span class="tw:text-[10px] tw:text-slate-500">{{
-                levelLabel(assessment?.resultLevel)
+                >{{ assessment?.resultAverage?.toFixed(2) ?? "—" }}
+                <small v-if="assessment?.resultAverage != null"
+                    >/ 4</small
+                ></strong
+            ><span>{{
+                assessment?.resultLevel
+                    ? levelLabels[assessment.resultLevel]
+                    : "Нет оценки"
             }}</span>
         </div>
-        <div class="tw:rounded-xl tw:bg-slate-50 tw:p-3 tw:text-center">
-            <small
-                class="tw:text-[10px] tw:font-semibold tw:tracking-wide tw:text-slate-500"
-                >POTENTIAL</small
+        <div>
+            <small>POTENTIAL</small
             ><strong
-                class="tw:text-2xl tw:font-semibold tw:tabular-nums tw:text-slate-900"
-                >{{ assessment?.potentialAverage?.toFixed(2) ?? "—" }}</strong
-            ><span class="tw:text-[10px] tw:text-slate-500">{{
-                levelLabel(assessment?.potentialLevel)
+                >{{ assessment?.potentialAverage?.toFixed(2) ?? "—" }}
+                <small v-if="assessment?.potentialAverage != null"
+                    >/ 4</small
+                ></strong
+            ><span>{{
+                assessment?.potentialLevel
+                    ? levelLabels[assessment.potentialLevel]
+                    : "Нет оценки"
             }}</span>
         </div>
-        <div class="tw:rounded-xl tw:bg-slate-50 tw:p-3 tw:text-center">
-            <small
-                class="tw:text-[10px] tw:font-semibold tw:tracking-wide tw:text-slate-500"
-                >9-BOX</small
-            ><strong
-                class="box-code tw:text-2xl tw:font-semibold tw:text-indigo-600"
-                >{{ assessment?.nineBoxCell ?? "—" }}</strong
-            ><span class="tw:text-[10px] tw:text-slate-500"
-                >Результат оценки</span
-            >
+        <div>
+            <small>9-BOX</small
+            ><strong class="box-code">{{
+                assessment?.nineBoxCell ?? "—"
+            }}</strong
+            ><span>{{
+                assessment?.nineBoxCell ? "Результат оценки" : "Не определён"
+            }}</span>
         </div>
     </div>
-    <NineBoxMatrix
-        v-if="!compact"
-        :selected-cell="assessment?.nineBoxCell"
-        :result-level="assessment?.resultLevel"
-        :potential-level="assessment?.potentialLevel"
-    />
+    <template v-if="!compact">
+        <h3 v-if="assessment?.nineBoxCell" class="tw:mb-5 tw:text-base">
+            {{ nineBoxMetadata[assessment.nineBoxCell].title }}
+        </h3>
+        <NineBoxMatrix
+            :selected-cell="assessment?.nineBoxCell"
+            :result-level="assessment?.resultLevel"
+            :potential-level="assessment?.potentialLevel"
+        />
+    </template>
 </template>
