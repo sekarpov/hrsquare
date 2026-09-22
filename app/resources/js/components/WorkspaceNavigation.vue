@@ -37,6 +37,13 @@ defineEmits<{ navigate: []; logout: [] }>();
             />Пользователи</RouterLink
         >
         <RouterLink
+            v-if="!auth.user?.mustChangePassword"
+            to="/cities"
+            :class="{ active: route.path === '/cities' }"
+            @click="$emit('navigate')"
+            ><i class="pi pi-map-marker" aria-hidden="true" />Города</RouterLink
+        >
+        <RouterLink
             to="/account/password"
             :class="{ active: route.path === '/account/password' }"
             @click="$emit('navigate')"

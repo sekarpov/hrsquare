@@ -4,6 +4,7 @@ use App\Domain\AssessmentCalculator;
 use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CandidateController;
+use App\Http\Controllers\CityController;
 use App\Http\Controllers\UserController;
 use App\Http\Middleware\EnsureActiveUser;
 use App\Http\Middleware\EnsurePasswordChanged;
@@ -23,6 +24,7 @@ Route::prefix('api')->group(function () {
             Route::get('users/managers', [UserController::class, 'managers']);
             Route::get('users/recruiters', [UserController::class, 'recruiters']);
             Route::apiResource('users', UserController::class)->except('show');
+            Route::apiResource('cities', CityController::class)->only(['index', 'store']);
             Route::apiResource('candidates', CandidateController::class);
             Route::get('candidates/{candidate}/assessments', [AssessmentController::class, 'index']);
             Route::post('candidates/{candidate}/assessments', [AssessmentController::class, 'store']);

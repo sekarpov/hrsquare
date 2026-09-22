@@ -171,6 +171,8 @@ GET /api/candidates?status=HIRED&resultLevel=HIGH&potentialLevel=MEDIUM&nineBoxC
 
 Также доступны search, position, city, company, division, project, managerId, recruiterId, page, perPage (1–100), sort, direction. Search ищет подстроку без учёта регистра, остальные текстовые фильтры — точное значение. Сортировка разрешена по fullName, position, city, company, division, project, status, createdAt, updatedAt. История пагинируется отдельно.
 
+Справочник городов доступен в разделе «Города»: все активные пользователи, сменившие стартовый пароль, могут просматривать список и добавлять города. В форме создания и редактирования кандидата город выбирается из списка с поиском; кнопка «Добавить город» сохраняет новый город в общий справочник и сразу выбирает его в форме. Поле необязательное. API: `GET /api/cities`, `POST /api/cities` с `{ "name": "Бишкек" }`; поле `city` кандидата принимает точное название из справочника или `null`. Миграция добавляет 19 начальных городов и ранее введённые города кандидатов, не изменяя данные кандидатов.
+
 ### Storage и deployment
 
 `./app:/app:ro` сохранён. Только `app/storage` и `app/bootstrap/cache` подключены на запись для Laravel; PHP entrypoint создаёт runtime-каталоги и настраивает владельца www-data. Существующий том uploads по-прежнему подключён в `/app/public/storage`; storage:link не запускается. Для будущих файлов public disk направлен непосредственно на эту точку монтирования. Загрузки файлов в MVP нет.

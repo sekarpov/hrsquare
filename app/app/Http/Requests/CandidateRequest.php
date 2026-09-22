@@ -29,7 +29,7 @@ class CandidateRequest extends FormRequest
     public function rules(): array
     {
         return ['fullName' => ['required', 'string', 'max:255'], 'position' => ['required', 'string', 'max:255'],
-            'city' => ['nullable', 'string', 'max:255'], 'company' => ['nullable', 'string', 'max:255'], 'division' => ['nullable', 'string', 'max:255'], 'project' => ['nullable', 'string', 'max:255'],
+            'city' => ['nullable', 'string', 'max:255', Rule::exists('cities', 'name')], 'company' => ['nullable', 'string', 'max:255'], 'division' => ['nullable', 'string', 'max:255'], 'project' => ['nullable', 'string', 'max:255'],
             'status' => ['required', Rule::enum(CandidateStatus::class)],
             'hiringManagerIds' => ['required', 'array', 'min:1'], 'hiringManagerIds.*' => ['required', 'integer', 'distinct', $this->participantRule(UserRole::MANAGER, 'hiringManagers')],
             'recruiterIds' => ['present', 'array'], 'recruiterIds.*' => ['required', 'integer', 'distinct', $this->participantRule(UserRole::RECRUITER, 'recruiters')]];
@@ -44,7 +44,7 @@ class CandidateRequest extends FormRequest
 
     public function messages(): array
     {
-        return ['fullName.required' => 'Поле ФИО обязательно.', 'position.required' => 'Поле должность обязательно.', 'hiringManagerIds.required' => 'Выберите хотя бы одного менеджера.', 'hiringManagerIds.min' => 'Выберите хотя бы одного менеджера.', 'hiringManagerIds.*.exists' => 'Выбранный пользователь должен быть активным менеджером.', 'recruiterIds.*.exists' => 'Выбранный пользователь должен быть активным рекрутером.'];
+        return ['fullName.required' => 'Поле ФИО обязательно.', 'position.required' => 'Поле должность обязательно.', 'city.exists' => 'Выберите город из справочника или сначала добавьте новый.', 'hiringManagerIds.required' => 'Выберите хотя бы одного менеджера.', 'hiringManagerIds.min' => 'Выберите хотя бы одного менеджера.', 'hiringManagerIds.*.exists' => 'Выбранный пользователь должен быть активным менеджером.', 'recruiterIds.*.exists' => 'Выбранный пользователь должен быть активным рекрутером.'];
     }
 
     public function candidateData(): array

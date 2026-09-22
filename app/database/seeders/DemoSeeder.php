@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Enums\UserRole;
 use App\Models\Candidate;
+use App\Models\City;
 use App\Models\User;
 use App\Services\AssessmentService;
 use Carbon\Carbon;
@@ -23,6 +24,7 @@ class DemoSeeder extends Seeder
         $names = ['Дарья Кузнецова', 'Илья Петров', 'Елена Орлова', 'Максим Лебедев', 'Ольга Попова', 'Артём Морозов', 'София Новикова', 'Дмитрий Павлов', 'Алина Васильева', 'Никита Фёдоров', 'Ксения Белова', 'Роман Зайцев'];
         $service = app(AssessmentService::class);
         $reference = now();
+        City::firstOrCreate(['name' => 'Москва']);
         foreach ($names as $i => $name) {
             $c = Candidate::firstOrCreate(['full_name' => $name, 'project' => 'HRSquare Demo'], ['position' => ['Product Manager', 'Frontend Developer', 'HR Business Partner', 'Data Analyst'][$i % 4], 'city' => ['Алматы', 'Астана', 'Москва'][$i % 3], 'company' => ['Square Labs', 'Northstar', 'Orbit'][$i % 3], 'division' => ['Product', 'Engineering', 'People'][$i % 3], 'status' => ['ACTIVE', 'HIRED', 'REJECTED'][$i % 3], 'created_by' => $r->id]);
             $c->hiringManagers()->sync($i % 2 ? [$b->id] : [$a->id, $b->id]);

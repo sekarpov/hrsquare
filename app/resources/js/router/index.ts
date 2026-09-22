@@ -30,6 +30,10 @@ export const router = createRouter({
             component: () => import("../views/AssessmentView.vue"),
         },
         {
+            path: "/cities",
+            component: () => import("../views/CitiesView.vue"),
+        },
+        {
             path: "/users",
             component: () => import("../views/UsersView.vue"),
             meta: { managesUsers: true },

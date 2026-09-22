@@ -6,6 +6,7 @@ import Select from "primevue/select";
 import Button from "primevue/button";
 import Message from "primevue/message";
 import UserMultiSelect from "./UserMultiSelect.vue";
+import CitySelect from "./CitySelect.vue";
 import { candidatesApi } from "../api/candidates";
 import { fieldErrors, errorMessage } from "../api/http";
 import { candidateStatuses } from "../config/presentation";
@@ -116,14 +117,27 @@ async function save() {
             >
                 <legend>{{ section.title }}</legend>
                 <div class="form-grid">
-                    <label
+                    <div
                         v-for="field in section.fields"
                         :key="field.key"
                         class="field"
                         :class="{ 'span-2': field.key === 'fullName' }"
-                        :for="`candidate-${field.key}`"
-                        >{{ field.label }}
+                    >
+                        <label :for="`candidate-${field.key}`">{{
+                            field.label
+                        }}</label>
+                        <CitySelect
+                            v-if="field.key === 'city'"
+                            input-id="candidate-city"
+                            v-model="form.city"
+                            :disabled="saving"
+                            :invalid="!!errors.city"
+                            :describedby="
+                                errors.city ? 'candidate-city-error' : undefined
+                            "
+                        />
                         <InputText
+                            v-else
                             :id="`candidate-${field.key}`"
                             v-model="form[field.key]"
                             :invalid="!!errors[field.key]"
@@ -145,7 +159,7 @@ async function save() {
                             class="error"
                             >{{ errors[field.key].join(" ") }}</small
                         >
-                    </label>
+                    </div>
                 </div>
             </fieldset>
             <fieldset class="form-section">

@@ -11,6 +11,10 @@ export type MainRisk =
     | "OWNERSHIP"
     | "MOTIVATION";
 export type CandidateStatus = "ACTIVE" | "HIRED" | "REJECTED";
+export interface City {
+    id: number;
+    name: string;
+}
 export interface User {
     id: number;
     fullName: string;
